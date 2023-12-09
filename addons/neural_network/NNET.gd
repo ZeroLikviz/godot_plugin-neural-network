@@ -1,4 +1,4 @@
-## Class for basis neural networks
+## Class for basic neural networks
 ## 
 ## provides basic functional for controlling neural network [br]
 ## here's an example: [br]
