@@ -9,13 +9,15 @@
 ##     neural_network.set_input([0.9])
 ##     neural_network.run()
 ##     neural_network.show_result()
-##     neural_networn.train(2000)
-##     neural_networn.show_result()
+##     neural_network.train(2000)
+##     neural_network.show_result()
 ## [/codeblock]
 @tool
 @icon("res://addons/neural_network/NNET icon.png")
 extends EditorPlugin
 class_name NNET
+## R_0_1 from 0 to 1 [br]
+## R_M1_1 from -1 to 1
 enum RangeN {
 	R_0_1,
 	R_M1_1
@@ -48,7 +50,7 @@ var layers_size: int
 var last_layer: int
 ## it is a component that indicates when a neural network should or should not use biases (offsets)
 var is_using_bias: bool = false
-## it is range, it can be only from 0 to 1, or from -1 to 1
+## it is range, it can be only from 0 to 1 (RangeN.R_0_1), or from -1 to 1 (RangeN.R_M1_1)
 var range_member: RangeN
 ## The variable tfd, short for "true f'()", is utilized within the "train" function. When tfd is set to false, the function f'() undergoes substitution with the value of 1.0.
 var tfd: bool
