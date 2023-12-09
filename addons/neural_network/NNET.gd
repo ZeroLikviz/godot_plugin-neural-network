@@ -63,10 +63,8 @@ func _init(layers_construction: Array, learning_rate_a: float, use_bias: bool, r
 	is_using_bias = use_bias
 	range_member = range_a
 	tfd = afd_a
-	var minw: float = 0.0
+	var minw: float = -1.0
 	var maxw: float = 1.0
-	if range_member== RangeN.R_M1_1:
-		minw = -1.0
 	layers = layers_construction
 	layers_size = layers.size()
 	last_layer = layers_size - 1
@@ -147,7 +145,7 @@ func get_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
 	weight_position += neuron1 * layers[layer2] + neuron2
 	assert(weight_position < weights.size(), "NNET get_weight: weight's position is too large")
 	return weight_position
-## It is a sigmoid function
+## It is a sigmoid function when range is from 0 to 1, and It id a tanh function when range is from -1 to 1
 func f(x: float) -> float:
 	if range_member== RangeN.R_M1_1:
 		return (2.0 / (1.0 + pow(2.7182, -2.0 * x))) - 1.0
@@ -161,9 +159,7 @@ func fd(x: float) -> float:
 func run() -> void:
 	for layer in range(1, layers_size):
 		for neuron in range(layers[layer]):
-			neurons_in[layer][neuron] = 0.0
-			if is_using_bias:
-				neurons_in[layer][neuron] = biases[layer - 1][neuron]
+			neurons_in[layer][neuron] = biases[layer - 1][neuron] * int(is_using_bias)
 			for back_neuron in range(layers[layer - 1]):
 				neurons_in[layer][neuron] += weights[get_weight(layer, neuron, layer - 1, back_neuron)] * neurons_out[layer - 1][back_neuron]
 			neurons_out[layer][neuron] = f(neurons_in[layer][neuron])
@@ -191,11 +187,13 @@ func run() -> void:
 
 func train(laps : int = 1) -> void:
 	var lap : int = 0
+	var passed : bool = false
 	while lap < laps:
 		lap += 1
 		
-		if tr_bool:
+		if tr_bool or passed:
 			run()
+		passed = true
 		for layer in range(last_layer - 1, -1, -1):
 			for neuron in range(layers[layer]):
 				for after_neuron in range(layers[layer + 1]):
