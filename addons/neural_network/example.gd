@@ -5,7 +5,7 @@ func rl_test() -> void:
 	rlnn.set_input([0.18])
 	rlnn.show_result()
 	for i in range(20000):
-		# here I'm calculating reward for what neuron network does. In this case the less output, the higher the reward, so neural network will try to minimize the output to maximize the reward
+		# here I'm calculating reward for what neural network does. In this case the less output, the higher the reward, so neural network will try to minimize the output to maximize the reward
 		rlnn.set_reward(1.0 - rlnn.get_output()[0])
 		rlnn.update()
 	rlnn.show_result()
