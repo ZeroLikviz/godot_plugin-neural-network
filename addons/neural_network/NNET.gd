@@ -4,9 +4,9 @@
 ## usually you need 5 functions:
 ## - [method NNET.set_input] to set input
 ## - [method NNET.set_desired_output] to set desired output
-## - [method NNET.run] to run neural_network
-## - [method NNET.get_output] to get output from neural_network after you run it (otherwise output will contain only zeros or output of last run)
-## - [method NNET.train] to train neural_network
+## - [method NNET.run] to run neural network
+## - [method NNET.get_output] to get output from neural network after you run it (otherwise output will contain only zeros or output of last run)
+## - [method NNET.train] to train neural network
 
 @icon("res://addons/neural_network/NNET icon.png")
 class_name NNET
@@ -29,7 +29,7 @@ var biases: Array[Array] = []
 var weights: Array = []
 ## desired output
 var output: Array = []
-## construction of a neural_network, like [1,8,2] [br]
+## construction of a neural network, like [1,8,2] [br]
 ## 1 input neuron [br]
 ## 1 hidden layer, which contains 8 neurons [br]
 ## 2 output neurons [br]
@@ -143,7 +143,7 @@ func get_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
 	weight_position += neuron1 * layers[layer2] + neuron2
 	assert(weight_position < weights.size(), "NNET get_weight: weight's position is too large")
 	return weight_position
-## It is a sigmoid function when range is from 0 to 1, and It id a tanh function when range is from -1 to 1
+## It is a sigmoid function when range is from 0 to 1, and It is a tanh function when range is from -1 to 1
 func f(x: float) -> float:
 	if range_member== RangeN.R_M1_1:
 		return (2.0 / (1.0 + pow(2.7182, -2.0 * x))) - 1.0
