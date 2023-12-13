@@ -2,10 +2,10 @@
 ## 
 ## provides basic functional for controlling neural network [br]
 ## usually you need 5 functions:
-## - [method NNET.set_input] tobset input
+## - [method NNET.set_input] to set input
 ## - [method NNET.set_desired_output] to set desired output
 ## - [method NNET.run] to run neural_network
-## - [method NNET.get_output] to get output from neural_network after you ran it (otherwise output will contain only zeros)
+## - [method NNET.get_output] to get output from neural_network after you run it (otherwise output will contain only zeros or output of last run)
 ## - [method NNET.train] to train neural_network
 
 @icon("res://addons/neural_network/NNET icon.png")
@@ -29,7 +29,7 @@ var biases: Array[Array] = []
 var weights: Array = []
 ## desired output
 var output: Array = []
-## construction of a neural network, like [1,8,2] [br]
+## construction of a neural_network, like [1,8,2] [br]
 ## 1 input neuron [br]
 ## 1 hidden layer, which contains 8 neurons [br]
 ## 2 output neurons [br]
