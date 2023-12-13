@@ -7,17 +7,17 @@
 ## - [method RLNNET.get_output] [br]
 ## - [method RLNNET.set_input] [br]
 ## [br]
-## [param set_input()] using it you giving neural_network current state of enviroment [br]
-## [param get_output()] it lets you to get what neural_network thinks [br]
+## [param set_input()] using it you giving neural network current state of enviroment [br]
+## [param get_output()] it lets you to get what neural network thinks [br]
 ## [param set_reward()] using it you say how good or bad current approach was [br]
-## [param update()] it uses the reward to change current approach and make a better one. After calling this function reset the enviroment [br]
+## [param update()] it uses the reward to change current approach and make a better one. After calling this function you should reset the enviroment [br]
 
 @icon("res://addons/neural_network/RLNNET icon.png")
 class_name RLNNET
 
-## contains main neural_network, you can think about it like main or stable approach
+## contains main neural network, you can think about it like main or stable approach
 var main : NNET = NNET.new([1,1],1.0,false)
-## contains extra neural_network, which used for testing new approaches
+## contains extra neural network, which used for testing new approaches
 var buffer : NNET = NNET.new([1,1],1.0,false)
 ## reward
 var reward : float = 0.0
