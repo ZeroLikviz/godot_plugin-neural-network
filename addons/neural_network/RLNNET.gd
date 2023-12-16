@@ -47,6 +47,7 @@ func mutate() -> void:
 		i = 0
 		while i < buffer.biases[layer].size():
 			buffer.biases[layer][i] += randf_range(-curiosity_rate, curiosity_rate)
+			i += 1
 
 ## sets input
 func set_input(input : Array[float]) -> void:
