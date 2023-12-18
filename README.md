@@ -31,6 +31,7 @@ Here is an example of how it may appear in your code:
    In the present context, to facilitate the learning process of the neural network, employ the "train()" function. "train()" function accepts an optional parameter that determines the number of training iterations. If this parameter is not specified, it defaults to 1.
 
   Using
+  
    To acquire the output of the neural network, firstly execute the "run()" command, followed by the utilization of the "get_output()" function. If you solely desire to display the output in the console, utilize the "show_result()" command.
 
 ```GDScript
