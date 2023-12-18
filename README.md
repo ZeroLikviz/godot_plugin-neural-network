@@ -3,6 +3,7 @@ The add-on provides 2 classes: NNET and RLNNET. NNET stands for NeuralNet Toolki
 The distinction between NNET and RLNNET is as follows: NNET employs back propagation for training, whereas RLNNET utilizes reinforcement learning.
 
 Usage of NNET
+
   Neural network initialization
    The initial step requires you to provide the architecture of your neural network. Firstly, specify the number of input neurons, followed by the sequence of hidden layers, and conclude with the number of output layers in the format [1,6,5,1].
 
@@ -22,6 +23,7 @@ Here is an example of how it may appear in your code:
 ```
 
   Training
+  
    To initiate the training of your neural network, it is imperative to supply input data. Accomplish this by employing the command "set_input()".
 
    Subsequently, you will need to establish the desired output you aim to obtain. This can be accomplished by utilizing the command "set_desired_output()".
