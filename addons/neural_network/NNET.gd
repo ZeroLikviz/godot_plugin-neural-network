@@ -231,7 +231,7 @@ func duplicate():
 	return buffer
 
 func assign(buffer : NNET) -> void:
-	output.assign(buffer.output.duplicate(true))
+	output.assign(buffer.output)
 	layers.assign(buffer.layers)
 	neurons_in.assign(buffer.neurons_in.duplicate(true))
 	neurons_out.assign(buffer.neurons_out.duplicate(true))
