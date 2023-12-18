@@ -20,8 +20,8 @@ func basic_test() -> void:
 	test.show_result()
 
 func _ready() -> void:
-	print("basic NN")
+	print("Here, the neural network tries to make the output equal to 0.5. The training method used is back propagation.")
 	basic_test()
-	print("same, but using reinforcement learning insted of back propagation")
+	print("Here, the neural network tries to make the output equal to 0.0. The training method used is reinforcement learning.")
 	rl_test()
 	
