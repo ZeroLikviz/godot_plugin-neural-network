@@ -32,7 +32,7 @@ var curiosity_rate : float = 0.1
 func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.008, use_bias: bool = true, range_a: NNET.RangeN = NNET.RangeN.R_0_1, afd_a : bool = false) -> void:
 	main.assign(NNET.new(layers_construction, 0.1, use_bias, range_a, afd_a))
 	main.enable_avoid_computations_mode()
-	buffer.assign(main)
+	buffer.assign(main.duplicate())
 	buffer.enable_avoid_computations_mode()
 
 ## creates new approach. You shouldn't use this function, forget about its existence. Using it without necessary knowledges can break everything down
@@ -52,7 +52,7 @@ func mutate() -> void:
 ## sets input
 func set_input(input : Array[float]) -> void:
 	main.set_input(input.duplicate(true))
-	buffer.set_input(input)
+	buffer.set_input(input.duplicate(true))
 	has_runned = false
 
 ## runs neural network
@@ -100,8 +100,9 @@ func update() -> void:
 ## use it when you change initial environment
 func reset() -> void:
 	has_updated = false
+	has_runned = false
 	reward = 0.0
-	reward_buffer = 0.0
+	reward_buffer = -1.0
 
 ## shows result of new approach. If new approach doesn't exist, it will return result of main approach
 func show_result() -> void:
