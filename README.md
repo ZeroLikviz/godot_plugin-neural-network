@@ -50,3 +50,43 @@ func _ready() -> void:
 	  neural_network.train(500)
 	  neural_network.show_result()
 ```
+
+
+Usage of RLNNET
+
+  Neural network initialization
+   To begin, you need to define the structure of your neural network. Start by indicating the amount of input neurons, then outline the arrangement of hidden layers, and conclude by specifying the number of output layers using the format.
+
+   In the second step, provide the curiosity (mutation) rate. This parameter indicates the degree of deviation of the new approach from the previous one.
+
+   The remaining steps are identical.
+
+  Training
+   The training procedure is presented within an unceasing, continuous loop.
+
+   In the primary stage, it is crucial to provide the input data via the utilization of the function "set_input()".
+   Subsequently, retrieve the output data by employing the function "get_output()".
+   
+   Once the neural network has been tested, evaluate the effectiveness of the output and assign the computed value to the "set_reward()" function. Subsequently, invoke the "update()" function.
+
+   Continue iterating until the desired results are attained.
+
+  Using
+   Upon completion of the training procedure, the neural network can be obtained by employing the "get_main()" function.
+
+
+Rough code example:
+```GDScirpt
+
+var neural_network : RLNNET = RLNNET.new([2,5,1], 0.00006, true)
+
+func _physics_process(_delta : float) -> void:
+      neural_network.set_input(InputData)
+      var output = neural_network.get_output()
+      
+      execute(output)
+      
+      if is_neural_network_dead:
+            neural_network.set_reward(reward)
+            neural_network.update()
+```
