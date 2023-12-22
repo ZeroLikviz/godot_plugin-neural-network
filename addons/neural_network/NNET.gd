@@ -180,7 +180,7 @@ func compute_deltas() -> void:
 ##     neural_network.train()
 ## [/codeblock]
 func train(laps : int = 1) -> void:
-	var lap : int = laps
+	var lap : int = 0
 	while lap < laps:
 		lap += 1
 		
