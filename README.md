@@ -79,7 +79,7 @@ Usage of RLNNET
 
 
 Rough code example:
-```GDScirpt
+```GDScript
 var neural_network : RLNNET = RLNNET.new([2,5,1], 0.00006, true)
 
 func _physics_process(_delta : float) -> void:
