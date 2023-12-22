@@ -2,7 +2,7 @@
 ## 
 ## provides basic functional for controlling neural network [br]
 ## usually you need 5 functions:
-## - [method NNET.set_input] to set input
+## - [method NNET.set_input] tobset input
 ## - [method NNET.set_desired_output] to set desired output
 ## - [method NNET.run] to run neural_network
 ## - [method NNET.get_output] to get output from neural_network after you ran it (otherwise output will contain only zeros)
@@ -50,9 +50,6 @@ var range_member: RangeN
 var tfd: bool
 ## TR stands for train run, this variable used for optimization. It helps to avoid unnecessary runs.
 var tr_bool: bool = true
-## if true all computations related to train function are avoided. It used in classes, which doesn't need train computations, like RLNNET, it uses its own training method
-var avoid_computations: bool = false
-
 
 func _init(layers_construction: Array = [1,1], learning_rate_a: float = 1.0, use_bias: bool = true, range_a: RangeN = RangeN.R_0_1, tfd_a : bool = false) -> void:
 	learning_rate = learning_rate_a
@@ -105,12 +102,6 @@ func set_input(input: Array[float]) -> void:
 	neurons_in[0] = input.duplicate(true)
 	neurons_out[0] = input.duplicate(true)
 	tr_bool = true
-## sets [member NNET.avoid_computations] to true
-func enable_avoid_computations_mode() -> void:
-	avoid_computations = true
-## sets [member NNET.avoid_computations] to false
-func disable_avoid_computations_mode() -> void:
-	avoid_computations = false
 
 ## you shouldn't use this function, but in case if you want here how it works: [br]
 ## provide two neurons present in distinct layers, and the function shall yield the weight index connecting these two neurons.
@@ -162,17 +153,17 @@ func run() -> void:
 			for back_neuron in range(layers[layer - 1]):
 				neurons_in[layer][neuron] += weights[get_weight(layer, neuron, layer - 1, back_neuron)] * neurons_out[layer - 1][back_neuron]
 			neurons_out[layer][neuron] = f(neurons_in[layer][neuron])
-	
-	if not avoid_computations:
-		for neuron in range(layers[last_layer]):
-			deltas[last_layer][neuron] = neurons_out[last_layer][neuron] - output[neuron]
-			deltas[last_layer][neuron] *= fd(neurons_in[last_layer][neuron])
-		for layer in range(last_layer - 1, 0, -1):
-			for neuron in range(layers[layer]):
-				deltas[layer][neuron] = 0.0
-				for after_neuron in range(layers[layer + 1]):
-					deltas[layer][neuron] += deltas[layer + 1][after_neuron] * weights[get_weight(layer, neuron, layer + 1, after_neuron)]
-				deltas[layer][neuron] *= fd(neurons_in[layer][neuron])
+
+func compute_deltas() -> void:
+	for neuron in range(layers[last_layer]):
+		deltas[last_layer][neuron] = neurons_out[last_layer][neuron] - output[neuron]
+		deltas[last_layer][neuron] *= fd(neurons_in[last_layer][neuron])
+	for layer in range(last_layer - 1, 0, -1):
+		for neuron in range(layers[layer]):
+			deltas[layer][neuron] = 0.0
+			for after_neuron in range(layers[layer + 1]):
+				deltas[layer][neuron] += deltas[layer + 1][after_neuron] * weights[get_weight(layer, neuron, layer + 1, after_neuron)]
+			deltas[layer][neuron] *= fd(neurons_in[layer][neuron])
 ## Member laps refers to the number of iterations through which this function will be repeatedly executed [br]
 ##
 ## [codeblock]neural_network.train(someValue)[/codeblock]
@@ -189,12 +180,13 @@ func run() -> void:
 ##     neural_network.train()
 ## [/codeblock]
 func train(laps : int = 1) -> void:
-	var lap : int = laps * int(avoid_computations)
+	var lap : int = laps
 	while lap < laps:
 		lap += 1
 		
 		if tr_bool:
 			run()
+			compute_deltas()
 		tr_bool = true
 		for layer in range(last_layer - 1, -1, -1):
 			for neuron in range(layers[layer]):
@@ -227,7 +219,6 @@ func duplicate():
 	buffer.neurons_in[0].assign(neurons_in[0])
 	buffer.weights.assign(weights)
 	buffer.biases.assign(biases.duplicate(true))
-	buffer.avoid_computations = avoid_computations
 	return buffer
 
 func assign(buffer : NNET) -> void:
@@ -245,4 +236,3 @@ func assign(buffer : NNET) -> void:
 	is_using_bias = buffer.is_using_bias
 	layers_size = buffer.layers_size
 	last_layer = buffer.last_layer
-	avoid_computations = buffer.avoid_computations
