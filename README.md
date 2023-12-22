@@ -80,16 +80,15 @@ Usage of RLNNET
 
 Rough code example:
 ```GDScirpt
-
 var neural_network : RLNNET = RLNNET.new([2,5,1], 0.00006, true)
 
 func _physics_process(_delta : float) -> void:
-    neural_network.set_input(InputData)
-    var output = neural_network.get_output()
-    
-    execute(output)
-    
-    if is_neural_network_dead:
-        neural_network.set_reward(reward)
-        neural_network.update()
+   neural_network.set_input(InputData)
+   var output = neural_network.get_output()
+   
+   execute(output)
+   
+   if is_neural_network_dead:
+      neural_network.set_reward(reward)
+      neural_network.update()
 ```
