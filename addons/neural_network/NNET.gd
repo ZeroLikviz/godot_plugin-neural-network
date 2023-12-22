@@ -2,7 +2,7 @@
 ## 
 ## provides basic functional for controlling neural network [br]
 ## usually you need 5 functions:
-## - [method NNET.set_input] tobset input
+## - [method NNET.set_input] to set input
 ## - [method NNET.set_desired_output] to set desired output
 ## - [method NNET.run] to run neural_network
 ## - [method NNET.get_output] to get output from neural_network after you ran it (otherwise output will contain only zeros)
