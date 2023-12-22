@@ -55,6 +55,7 @@ func _ready() -> void:
 Usage of RLNNET
 
   Neural network initialization
+
    To begin, you need to define the structure of your neural network. Start by indicating the amount of input neurons, then outline the arrangement of hidden layers, and conclude by specifying the number of output layers using the format.
 
    In the second step, provide the curiosity (mutation) rate. This parameter indicates the degree of deviation of the new approach from the previous one.
@@ -62,6 +63,7 @@ Usage of RLNNET
    The remaining steps are identical.
 
   Training
+
    The training procedure is presented within an unceasing, continuous loop.
 
    In the primary stage, it is crucial to provide the input data via the utilization of the function "set_input()".
@@ -72,6 +74,7 @@ Usage of RLNNET
    Continue iterating until the desired results are attained.
 
   Using
+
    Upon completion of the training procedure, the neural network can be obtained by employing the "get_main()" function.
 
 
