@@ -236,3 +236,39 @@ func assign(buffer : NNET) -> void:
 	is_using_bias = buffer.is_using_bias
 	layers_size = buffer.layers_size
 	last_layer = buffer.last_layer
+
+##  accepts 1 parameter containing the file name with the extension. If the parameter contains the full path, the file will be located at the specified path
+func save_data(file_name : String) -> void:
+	var file =  FileAccess.open("res://addons/neural_network/data/" + file_name, FileAccess.WRITE)
+	if file_name.begins_with("res://") or file_name.begins_with("user://"):
+		file.close()
+		file = FileAccess.open(file_name, FileAccess.WRITE)
+	for layer in layers:
+		file.store_64(layer)
+	for weight in weights:
+		file.store_double(weight)
+	for bias_layer in biases:
+		for bias in bias_layer:
+			file.store_double(bias)
+	file.close()
+
+## accepts 1 parameter containing the file name with the extension. If the parameter contains the full path, the data will be loaded from the full path
+func load_data(file_name : String) -> void:
+	var file =  FileAccess.open("res://addons/neural_network/data/" + file_name, FileAccess.READ)
+	if file_name.begins_with("res://") or file_name.begins_with("user://"):
+		file.close()
+		file = FileAccess.open(file_name, FileAccess.READ)
+	for layer in layers:
+		assert(layer == file.get_64(), "neural network structure doesn't match")
+	var i : int = 0
+	while i < weights.size():
+		weights[i] = file.get_double()
+		i += 1
+	i = 0
+	while i < biases.size():
+		var j : int = 0
+		while j < biases[i].size():
+			biases[i][j] = file.get_double()
+			j += 1
+		i += 1
+	file.close()
