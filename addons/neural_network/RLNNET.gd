@@ -32,6 +32,7 @@ var curiosity_rate : float = 0.1
 func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.008, use_bias: bool = true, range_a: NNET.RangeN = NNET.RangeN.R_0_1, afd_a : bool = false) -> void:
 	main.assign(NNET.new(layers_construction, 0.1, use_bias, range_a, afd_a))
 	buffer.assign(main.duplicate())
+	curiosity_rate = curiosity_rate_a
 
 ## creates new approach. You shouldn't use this function, forget about its existence. Using it without necessary knowledges can break everything down
 func mutate() -> void:
