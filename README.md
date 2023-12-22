@@ -88,7 +88,7 @@ func _physics_process(_delta : float) -> void:
 	  
 	  execute(output)
 	  
-	  if has_game_finished:
+	  if game_has_finished:
 	  	  neural_network.set_reward(reward)
 	  	  neural_network.update()
 ```
