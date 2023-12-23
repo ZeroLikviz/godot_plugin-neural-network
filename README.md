@@ -56,7 +56,7 @@ Usage of RLNNET
 
   Neural network initialization
 
-   To begin, you need to define the structure of your neural network. Start by indicating the amount of input neurons, then outline the arrangement of hidden layers, and conclude by specifying the number of output layers using the format.
+   To begin, you need to define the structure of your neural network. Start by indicating the amount of input neurons, then outline the arrangement of hidden layers, and conclude by specifying the number of output layers.
 
    In the second step, provide the curiosity (mutation) rate. This parameter indicates the degree of deviation of the new approach from the previous one.
 
