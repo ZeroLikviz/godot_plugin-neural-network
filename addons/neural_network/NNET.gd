@@ -239,6 +239,8 @@ func assign(buffer : NNET) -> void:
 
 ##  accepts 1 parameter containing the file name with the extension. If the parameter contains the full path, the file will be located at the specified path
 func save_data(file_name : String) -> void:
+	if not DirAccess.dir_exists_absolute("res://addons/neural_network/data/"):
+		DirAccess.make_dir_absolute("res://addons/neural_network/data")
 	var file =  FileAccess.open("res://addons/neural_network/data/" + file_name, FileAccess.WRITE)
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
@@ -262,12 +264,14 @@ func load_data(file_name : String) -> void:
 		assert(layer == file.get_64(), "neural network structure doesn't match")
 	var i : int = 0
 	while i < weights.size():
+		assert(file.eof_reached() == false, "neural network structure doesn't match")
 		weights[i] = file.get_double()
 		i += 1
 	i = 0
 	while i < biases.size():
 		var j : int = 0
 		while j < biases[i].size():
+			assert(file.eof_reached() == false, "neural network structure doesn't match")
 			biases[i][j] = file.get_double()
 			j += 1
 		i += 1
