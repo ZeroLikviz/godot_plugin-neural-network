@@ -70,12 +70,12 @@ func _init(layers_construction: Array = [1,1], learning_rate_a: float = 1.0, use
 		neurons_in.append([])
 		deltas.append([])
 		
-		var j : int = 0
-		while j < layers[i]:
-			neurons_in[-1].append(0.0)
-			neurons_out[i].append(0.0)
-			deltas[i].append(0.0)
-			j += 1
+		neurons_in[i].resize(layers[i])
+		neurons_in[i].fill(0.0)
+		neurons_out[i].resize(layers[i])
+		neurons_out[i].fill(0.0)
+		deltas[i].resize(layers[i])
+		deltas[i].fill(0.0)
 		i += 1
 	i = 0
 	
