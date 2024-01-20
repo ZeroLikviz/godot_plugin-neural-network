@@ -53,6 +53,9 @@ var range_member: RangeN
 var tfd: bool
 ## This variable used for optimization. It helps to avoid unnecessary runs.
 var train_run: bool = true
+## That is like hash table, but that is just a 3D array. Used for optimization
+var weights_table : Array = []
+
 
 func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, range_value: RangeN = RangeN.R_0_1, tfd_value : bool = false) -> void:
 	learning_rate = learning_rate_value
@@ -122,6 +125,26 @@ func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0,
 				biases[i][j] = randf_range(minw, maxw)
 				j += 1
 			i += 1
+	
+	fill_table_of_weights()
+
+func fill_table_of_weights() -> void:
+	weights_table.resize(layers_size - 1)
+	var i : int = 0
+	while i < layers_size - 1:
+		weights_table[i] = []
+		weights_table[i].resize(layers[i])
+		var j : int = 0
+		while j < layers[i]:
+			weights_table[i][j] = []
+			weights_table[i][j].resize(layers[i + 1])
+			var z : int = 0
+			while z < layers[i + 1]:
+				weights_table[i][j][z] = get_weight(i, j, i + 1, z)
+				z += 1
+			j += 1
+		i += 1
+
 
 ## This function is responsible for assigning the desired output value for the neural network.
 func set_desired_output(desired_output: Array[float]) -> void:
