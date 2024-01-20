@@ -12,9 +12,9 @@
 class_name NNET
 ## R_0_1 from 0 to 1 [br]
 ## R_M1_1 from -1 to 1
-enum RangeN {
-	R_0_1,
-	R_M1_1
+enum RangeN{
+	R_0_1 = 0,
+	R_M1_1 = 1
 }
 
 var f : Callable
@@ -324,6 +324,10 @@ func save_data(file_name : String) -> void:
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.WRITE)
+	file.store_8(int(is_using_bias))
+	file.store_8(range_member)
+	file.store_8(int(tfd))
+	file.store_64(layers_size)
 	for layer in layers:
 		file.store_64(layer)
 	for weight in weights:
@@ -333,8 +337,8 @@ func save_data(file_name : String) -> void:
 			file.store_double(bias)
 	file.close()
 
-## accepts 1 parameter containing the file name with the extension. If the parameter contains the full path, the data will be loaded from the full path
-func load_data(file_name : String) -> void:
+## This function loads data from file into neural network, but in case if structure of neural network in file differs with structure of neural network you trying to load data in, then it will fail (try copy_from_file() function if you want to load data into neural network indepented on structure, but in this case structure of neural network may change). accepts 1 parameter containing the file name with the extension. If the parameter contains the full path, the data will be loaded from the full path. Function returns 0 on successful loading and -1 on fail.
+func load_data(file_name : String) -> int:
 	var buffer : NNET = duplicate()
 	var corrupted: bool = false
 	
@@ -342,14 +346,24 @@ func load_data(file_name : String) -> void:
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.READ)
+	if file.get_8() != int(is_using_bias):
+		push_error("neural network structure doesn't match")
+		return -1
+	file.get_16()
+	file.get_64()
 	for layer in layers:
-		assert(layer == file.get_64(), "neural network structure doesn't match")
+		if layer != file.get_64():
+			push_error("neural network structure doesn't match")
+			assign(buffer)
+			return -1
 	var i : int = 0
 	while i < weights.size():
 		var boolean : bool = not file.eof_reached()
-		if not boolean: corrupted = true
-		assert(boolean, "neural network structure doesn't match")
-		
+		if not boolean:
+			corrupted = true
+			push_error("neural network structure doesn't match")
+			assign(buffer)
+			return -1
 		weights[i] = file.get_double()
 		i += 1
 	i = 0
@@ -357,15 +371,41 @@ func load_data(file_name : String) -> void:
 		var j : int = 0
 		while j < biases[i].size():
 			var boolean : bool = not file.eof_reached()
-			if not boolean: corrupted = true
-			assert(boolean, "neural network structure doesn't match")
+			if not boolean:
+				corrupted = true
+				push_error("neural network structure doesn't match")
+				assign(buffer)
+				return -1
 			biases[i][j] = file.get_double()
 			j += 1
 		i += 1
 	
 	file.get_double()
-	assert(file.eof_reached(),"neural network structure doesn't match")
 	if corrupted or not file.eof_reached():
 		assign(buffer)
+		push_error("neural network structure doesn't match")
+		return -1
 	file.close()
+	fill_table_of_weights()
+	return 0
+
+## This function copies neural network from file. That is similar to load_data() function, but this function copies everything including structure
+func copy_from_file(file_name : String) -> void:
+	var file =  FileAccess.open("res://addons/neural_network/data/" + file_name, FileAccess.READ)
+	if file_name.begins_with("res://") or file_name.begins_with("user://"):
+		file.close()
+		file = FileAccess.open(file_name, FileAccess.READ)
+	var bias_fbool : bool = file.get_8()
+	var range_fvalue = file.get_8()
+	var tfd_fvalue = file.get_8()
+	var structure_farray = []
+	var size = file.get_64()
+	var i : int = 0
+	while i < size:
+		structure_farray.append(file.get_64())
+		i += 1
+	var buffer : NNET = NNET.new(structure_farray, learning_rate, bias_fbool, range_fvalue, tfd_fvalue)
+	file.close()
+	buffer.load_data(file_name)
+	assign(buffer)
 	fill_table_of_weights()
