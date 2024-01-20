@@ -17,6 +17,9 @@ enum RangeN {
 	R_M1_1
 }
 
+var f : Callable
+var fd : Callable = func(x : float) -> float:
+	return 1.0
 ## output of neurons
 var neurons_out: Array[Array] = []
 ## input of neurons
@@ -51,11 +54,24 @@ var tfd: bool
 ## This variable used for optimization. It helps to avoid unnecessary runs.
 var train_run: bool = true
 
-func _init(layers_construction: Array = [1,1], learning_rate_a: float = 1.0, use_bias: bool = true, range_a: RangeN = RangeN.R_0_1, tfd_a : bool = false) -> void:
-	learning_rate = learning_rate_a
+func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, range_value: RangeN = RangeN.R_0_1, tfd_value : bool = false) -> void:
+	learning_rate = learning_rate_value
 	is_using_bias = use_bias
-	range_member = range_a
-	tfd = tfd_a
+	range_member = range_value
+	if range_member == RangeN.R_0_1:
+		f = func (x : float) -> float:
+			return 1.0 / (pow(2.7182, -x) + 1.0)
+	else:
+		f = func (x : float) -> float:
+			return (2.0 / (1.0 + pow(2.7182, -2.0 * x))) - 1.0
+	if tfd:
+		if range_member == RangeN.R_0_1:
+			fd = func (x : float) -> float:
+				return 1.0 - pow(f.call(x), 2)
+		else:
+			fd = func (x : float) -> float:
+				return f.call(x) * (1.0 - f.call(x))
+	tfd = tfd_value
 	var minw: float = -1.0
 	var maxw: float = 1.0
 	layers = layers_construction
@@ -144,16 +160,6 @@ func get_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
 		i += 1
 	weight_position += neuron1 * layers[layer2] + neuron2
 	return weight_position
-## It is a sigmoid function when range is from 0 to 1, and It id a tanh function when range is from -1 to 1
-func f(x: float) -> float:
-	if range_member== RangeN.R_M1_1:
-		return (2.0 / (1.0 + pow(2.7182, -2.0 * x))) - 1.0
-	return 1.0 / (pow(2.7182, -x) + 1.0)
-## f'(x)
-func fd(x: float) -> float:
-	if range_member== RangeN.R_M1_1:
-		return 1.0 - pow(f(x), 2) * int(tfd)
-	return (f(x) * (1.0 - f(x)) * int(tfd)) + (1 - int(tfd))
 ## This function employs a neural network model to execute computations and generate output
 func run() -> void:
 	train_run = false
@@ -166,7 +172,7 @@ func run() -> void:
 			while back_neuron < layers[layer - 1]:
 				neurons_in[layer][neuron] += weights[get_weight(layer, neuron, layer - 1, back_neuron)] * neurons_out[layer - 1][back_neuron]
 				back_neuron += 1
-			neurons_out[layer][neuron] = f(neurons_in[layer][neuron])
+			neurons_out[layer][neuron] = f.call(neurons_in[layer][neuron])
 			neuron += 1
 		layer += 1
 
@@ -174,7 +180,7 @@ func compute_deltas() -> void:
 	var neuron : int = 0
 	while neuron < layers[last_layer]:
 		deltas[last_layer][neuron] = neurons_out[last_layer][neuron] - output[neuron]
-		deltas[last_layer][neuron] *= fd(neurons_in[last_layer][neuron])
+		deltas[last_layer][neuron] *= fd.call(neurons_in[last_layer][neuron])
 		neuron += 1
 	
 	var layer : int = last_layer - 1
@@ -186,7 +192,7 @@ func compute_deltas() -> void:
 			while after_neuron < layers[layer + 1]:
 				deltas[layer][neuron] += deltas[layer + 1][after_neuron] * weights[get_weight(layer, neuron, layer + 1, after_neuron)]
 				after_neuron += 1
-			deltas[layer][neuron] *= fd(neurons_in[layer][neuron])
+			deltas[layer][neuron] *= fd.call(neurons_in[layer][neuron])
 			neuron += 1
 		layer -= 1
 ## Member laps refers to the number of iterations through which this function will be repeatedly executed [br]
