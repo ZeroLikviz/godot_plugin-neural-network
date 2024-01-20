@@ -145,6 +145,14 @@ func fill_table_of_weights() -> void:
 			j += 1
 		i += 1
 
+func get_tabled_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
+	var buffer = neuron1
+	var bool1 = int(layer1 > layer2)
+	var bool2 = 1 - bool1
+	layer1 = min(layer1, layer2)
+	neuron1 = neuron2 * bool1 + neuron1 * bool2
+	neuron2 = buffer * bool1 + neuron2 * bool2
+	return weights_table[layer1][neuron1][neuron2]
 
 ## This function is responsible for assigning the desired output value for the neural network.
 func set_desired_output(desired_output: Array[float]) -> void:
@@ -193,7 +201,7 @@ func run() -> void:
 			neurons_in[layer][neuron] = biases[layer - 1][neuron] * int(is_using_bias)
 			var back_neuron : int = 0
 			while back_neuron < layers[layer - 1]:
-				neurons_in[layer][neuron] += weights[get_weight(layer, neuron, layer - 1, back_neuron)] * neurons_out[layer - 1][back_neuron]
+				neurons_in[layer][neuron] += weights[get_tabled_weight(layer, neuron, layer - 1, back_neuron)] * neurons_out[layer - 1][back_neuron]
 				back_neuron += 1
 			neurons_out[layer][neuron] = f.call(neurons_in[layer][neuron])
 			neuron += 1
@@ -213,7 +221,7 @@ func compute_deltas() -> void:
 			deltas[layer][neuron] = 0.0
 			var after_neuron : int = 0
 			while after_neuron < layers[layer + 1]:
-				deltas[layer][neuron] += deltas[layer + 1][after_neuron] * weights[get_weight(layer, neuron, layer + 1, after_neuron)]
+				deltas[layer][neuron] += deltas[layer + 1][after_neuron] * weights[get_tabled_weight(layer, neuron, layer + 1, after_neuron)]
 				after_neuron += 1
 			deltas[layer][neuron] *= fd.call(neurons_in[layer][neuron])
 			neuron += 1
@@ -249,7 +257,7 @@ func train(laps : int = 1) -> void:
 			while neuron < layers[layer]:
 				var after_neuron : int = 0
 				while after_neuron < layers[layer + 1]:
-					weights[get_weight(layer, neuron, layer + 1, after_neuron)] -= learning_rate * deltas[layer + 1][after_neuron] * neurons_out[layer][neuron]
+					weights[get_tabled_weight(layer, neuron, layer + 1, after_neuron)] -= learning_rate * deltas[layer + 1][after_neuron] * neurons_out[layer][neuron]
 					after_neuron += 1
 				neuron += 1
 			layer -= 1
@@ -303,7 +311,11 @@ func assign(buffer : NNET) -> void:
 	is_using_bias = buffer.is_using_bias
 	layers_size = buffer.layers_size
 	last_layer = buffer.last_layer
-
+	weights_table.resize(buffer.weights_table.size())
+	var i : int = 0
+	while i < weights_table.size():
+		weights_table[i] = buffer.weights_table[i].duplicate(true)
+		i += 1
 ##  accepts 1 parameter containing the file name with the extension. If the parameter contains the full path, the file will be located at the specified path
 func save_data(file_name : String) -> void:
 	if not DirAccess.dir_exists_absolute("res://addons/neural_network/data/"):
@@ -356,4 +368,4 @@ func load_data(file_name : String) -> void:
 	if corrupted or not file.eof_reached():
 		assign(buffer)
 	file.close()
-	
+	fill_table_of_weights()
