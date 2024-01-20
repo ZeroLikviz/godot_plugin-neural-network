@@ -48,8 +48,8 @@ var is_using_bias: bool = false
 var range_member: RangeN
 ## The variable tfd, short for "true f'()", is utilized within the "train" function. When tfd is set to false, the function f'() undergoes substitution with the value of 1.0.
 var tfd: bool
-## TR stands for train run, this variable used for optimization. It helps to avoid unnecessary runs.
-var tr_bool: bool = true
+## This variable used for optimization. It helps to avoid unnecessary runs.
+var train_run: bool = true
 
 func _init(layers_construction: Array = [1,1], learning_rate_a: float = 1.0, use_bias: bool = true, range_a: RangeN = RangeN.R_0_1, tfd_a : bool = false) -> void:
 	learning_rate = learning_rate_a
@@ -62,22 +62,32 @@ func _init(layers_construction: Array = [1,1], learning_rate_a: float = 1.0, use
 	layers_size = layers.size()
 	last_layer = layers_size - 1
 	assert(layers_size > 0, "NNET: layers_size less or equals to 0")
-	for layer in layers:
-		assert(layer > 0, "NNET: any layer cant have size 0 or less")
+	
+	var i : int = 0
+	while i < layers_size:
+		assert(layers[i] > 0, "NNET: any layer cant have size 0 or less")
 		neurons_out.append([])
 		neurons_in.append([])
 		deltas.append([])
-		for i in range(layer):
-			neurons_in[-1].append(0.0)
-			neurons_out[-1].append(0.0)
-			deltas[-1].append(0.0)
+		
+		neurons_in[i].resize(layers[i])
+		neurons_out[i].resize(layers[i])
+		deltas[i].resize(layers[i])
+		i += 1
+	i = 0
+	
 	deltas[0].resize(0)
 	var weights_size: int = 0
-	for i in range(layers_size - 1):
+	while i < layers_size - 1:
 		weights_size += layers[i] * layers[i + 1]
+		i += 1
 	weights.resize(weights_size)
-	for i in range(weights_size):
+	i = 0
+	
+	
+	while i < weights_size:
 		weights[i] = randf_range(minw, maxw)
+		i += 1
 	output.resize(layers[last_layer])
 	output.fill(0.0)
 
@@ -85,23 +95,27 @@ func _init(layers_construction: Array = [1,1], learning_rate_a: float = 1.0, use
 		biases.resize(layers.size() - 1)
 		for el in biases:
 			el = []
-		for i in range(biases.size()):
+		i = 0
+		while i < biases.size():
 			biases[i].resize(layers[i + 1])
-			for j in range(biases[i].size()):
+			i += 1
+			var j : int = 0
+			while j < biases[i].size():
 				biases[i][j] = randf_range(minw, maxw)
+				j += 1
 
 ## This function is responsible for assigning the desired output value for the neural network.
 func set_desired_output(desired_output: Array[float]) -> void:
 	assert(desired_output.size() == layers[last_layer], "set_desired_output: sizes doesn't match")
 	output = desired_output.duplicate(true)
-	tr_bool = true
+	train_run = true
 
 ## This function is responsible for assigning the input value for the neural network.
 func set_input(input: Array[float]) -> void:
 	assert(input.size() == layers[0], "set_input: sizes doesn't match")
 	neurons_in[0] = input.duplicate(true)
 	neurons_out[0] = input.duplicate(true)
-	tr_bool = true
+	train_run = true
 
 ## you shouldn't use this function, but in case if you want here how it works: [br]
 ## provide two neurons present in distinct layers, and the function shall yield the weight index connecting these two neurons.
@@ -113,11 +127,6 @@ func set_input(input: Array[float]) -> void:
 ##     neural_network.weights[index] = SomeFloatValueThatEvilUserUsedToChangeOneOfTheWeights
 ## [/codeblock]
 func get_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
-	assert(layer1 < layers.size(), "NNET get_weight: layer's position is too large")
-	assert(layer2 < layers.size(), "NNET get_weight: layer's position is too large")
-	assert(layer1 >= 0, "NNET get_weight: layer's position is negative")
-	assert(layer2 >= 0, "NNET get_weight: layer's position is negative")
-	assert(layer1 != layer2, "NNET get_weight: layer-1 and layer-2 cannot be the same, weights for neurons in the same layer doesn't exist")
 	if layer1 > layer2:
 		var buff1 = layer1
 		layer1 = layer2
@@ -125,14 +134,12 @@ func get_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
 		var buff2 = neuron1
 		neuron1 = neuron2
 		neuron2 = buff2
-
-	assert(neuron1 < layers[layer1], "NNET get_weight: such neuron doesn't exist, his position is more than layer can contain")
-	assert(neuron2 < layers[layer2], "NNET get_weight: such neuron doesn't exist, his position is more than layer can contain")
 	var weight_position: int = 0
-	for i in range(layer1):
+	var i: int = 0
+	while i < layer1:
 		weight_position += layers[i] * layers[i + 1]
+		i += 1
 	weight_position += neuron1 * layers[layer2] + neuron2
-	assert(weight_position < weights.size(), "NNET get_weight: weight's position is too large")
 	return weight_position
 ## It is a sigmoid function when range is from 0 to 1, and It id a tanh function when range is from -1 to 1
 func f(x: float) -> float:
@@ -146,24 +153,39 @@ func fd(x: float) -> float:
 	return (f(x) * (1.0 - f(x)) * int(tfd)) + (1 - int(tfd))
 ## This function employs a neural network model to execute computations and generate output
 func run() -> void:
-	tr_bool = false
-	for layer in range(1, layers_size):
-		for neuron in range(layers[layer]):
+	train_run = false
+	var layer : int = 1
+	while layer < layers_size:
+		var neuron : int = 0
+		while neuron < layers[layer]:
 			neurons_in[layer][neuron] = biases[layer - 1][neuron] * int(is_using_bias)
-			for back_neuron in range(layers[layer - 1]):
+			var back_neuron : int = 0
+			while back_neuron < layers[layer - 1]:
 				neurons_in[layer][neuron] += weights[get_weight(layer, neuron, layer - 1, back_neuron)] * neurons_out[layer - 1][back_neuron]
+				back_neuron += 1
 			neurons_out[layer][neuron] = f(neurons_in[layer][neuron])
+			neuron += 1
+		layer += 1
 
 func compute_deltas() -> void:
-	for neuron in range(layers[last_layer]):
+	var neuron : int = 0
+	while neuron < layers[last_layer]:
 		deltas[last_layer][neuron] = neurons_out[last_layer][neuron] - output[neuron]
 		deltas[last_layer][neuron] *= fd(neurons_in[last_layer][neuron])
-	for layer in range(last_layer - 1, 0, -1):
-		for neuron in range(layers[layer]):
+		neuron += 1
+	
+	var layer : int = last_layer - 1
+	while layer > 0:
+		neuron = 0
+		while neuron < layers[layer]:
 			deltas[layer][neuron] = 0.0
-			for after_neuron in range(layers[layer + 1]):
+			var after_neuron : int = 0
+			while after_neuron < layers[layer + 1]:
 				deltas[layer][neuron] += deltas[layer + 1][after_neuron] * weights[get_weight(layer, neuron, layer + 1, after_neuron)]
+				after_neuron += 1
 			deltas[layer][neuron] *= fd(neurons_in[layer][neuron])
+			neuron += 1
+		layer -= 1
 ## Member laps refers to the number of iterations through which this function will be repeatedly executed [br]
 ##
 ## [codeblock]neural_network.train(someValue)[/codeblock]
@@ -184,19 +206,30 @@ func train(laps : int = 1) -> void:
 	while lap < laps:
 		lap += 1
 		
-		if tr_bool:
+		if train_run:
 			run()
 			compute_deltas()
-		tr_bool = true
-		for layer in range(last_layer - 1, -1, -1):
-			for neuron in range(layers[layer]):
-				for after_neuron in range(layers[layer + 1]):
+		train_run = true
+		
+		var layer : int = last_layer - 1
+		while layer > -1:
+			var neuron : int = 0
+			while neuron < layers[layer]:
+				var after_neuron : int = 0
+				while after_neuron < layers[layer + 1]:
 					weights[get_weight(layer, neuron, layer + 1, after_neuron)] -= learning_rate * deltas[layer + 1][after_neuron] * neurons_out[layer][neuron]
-
+					after_neuron += 1
+				neuron += 1
+			layer -= 1
+		
 		if is_using_bias:
-			for layer in range(last_layer - 1, -1, -1):
-				for neuron in range(layers[layer + 1]):
+			layer = last_layer - 1
+			while layer > -1:
+				var neuron : int = 0
+				while neuron < layers[layer + 1]:
 					biases[layer][neuron] -= learning_rate * deltas[layer + 1][neuron]
+					neuron += 1
+				layer -= 1
 
 ## returns a copy of the last layer of neurons_out ( see [member NNET.neurons_out] )
 func get_output() -> Array:
@@ -206,8 +239,10 @@ func get_output() -> Array:
 func show_result() -> void:
 	var size: int = layers[last_layer]
 	var console : String = ""
-	for i in range(size):
+	var i : int = 0
+	while i < size:
 		console += "[" + str(neurons_out[last_layer][i]) + "]" + " "
+		i += 1
 	print(console)
 
 
@@ -230,7 +265,7 @@ func assign(buffer : NNET) -> void:
 	weights.assign(buffer.weights)
 	deltas.assign(buffer.deltas.duplicate(true))
 	tfd = buffer.tfd
-	tr_bool = buffer.tr_bool
+	train_run = buffer.train_run
 	range_member = buffer.range_member
 	learning_rate = buffer.learning_rate
 	is_using_bias = buffer.is_using_bias
