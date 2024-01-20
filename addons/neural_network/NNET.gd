@@ -70,9 +70,12 @@ func _init(layers_construction: Array = [1,1], learning_rate_a: float = 1.0, use
 		neurons_in.append([])
 		deltas.append([])
 		
-		neurons_in[i].resize(layers[i])
-		neurons_out[i].resize(layers[i])
-		deltas[i].resize(layers[i])
+		var j : int = 0
+		while j < layers[i]:
+			neurons_in[-1].append(0.0)
+			neurons_out[i].append(0.0)
+			deltas[i].append(0.0)
+			j += 1
 		i += 1
 	i = 0
 	
@@ -98,11 +101,11 @@ func _init(layers_construction: Array = [1,1], learning_rate_a: float = 1.0, use
 		i = 0
 		while i < biases.size():
 			biases[i].resize(layers[i + 1])
-			i += 1
 			var j : int = 0
 			while j < biases[i].size():
 				biases[i][j] = randf_range(minw, maxw)
 				j += 1
+			i += 1
 
 ## This function is responsible for assigning the desired output value for the neural network.
 func set_desired_output(desired_output: Array[float]) -> void:
