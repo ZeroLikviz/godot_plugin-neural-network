@@ -17,6 +17,8 @@ enum RangeN{
 	R_M1_1 = 1
 }
 
+var get_bias : Callable = func(layer : int, neuron : int) -> float:
+	return 0.0
 var f : Callable
 var fd : Callable = func(x : float) -> float:
 	return 1.0
@@ -114,6 +116,8 @@ func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0,
 	output.fill(0.0)
 
 	if is_using_bias:
+		get_bias = func(layer : int, neuron : int) -> float:
+			return biases[layer][neuron]
 		biases.resize(layers.size() - 1)
 		for el in biases:
 			el = []
@@ -198,7 +202,7 @@ func run() -> void:
 	while layer < layers_size:
 		var neuron : int = 0
 		while neuron < layers[layer]:
-			neurons_in[layer][neuron] = biases[layer - 1][neuron] * int(is_using_bias)
+			neurons_in[layer][neuron] = get_bias.call(layer - 1,neuron)
 			var back_neuron : int = 0
 			while back_neuron < layers[layer - 1]:
 				neurons_in[layer][neuron] += weights[get_tabled_weight(layer, neuron, layer - 1, back_neuron)] * neurons_out[layer - 1][back_neuron]
