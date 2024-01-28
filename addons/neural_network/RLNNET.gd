@@ -29,7 +29,7 @@ var has_updated : bool = false
 var has_runned : bool = false
 ## curiosity (mutation) rate, essentially it is how much different new approaches will be from main approach. I recommend to use small values like 0.0005
 var curiosity_rate : float = 0.1
-func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.008, use_bias: bool = true, range_a: NNET.RangeN = NNET.RangeN.R_0_1, afd_a : bool = false) -> void:
+func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.008, use_bias: bool = true, range_a: NNET.TheRange = NNET.TheRange.new(0.0,1.0), afd_a : bool = false) -> void:
 	main.assign(NNET.new(layers_construction, 0.1, use_bias, range_a, afd_a))
 	buffer.assign(main.duplicate())
 	curiosity_rate = curiosity_rate_a
@@ -104,13 +104,13 @@ func reset() -> void:
 	reward_buffer = -1.0
 
 ## shows result of new approach. If new approach doesn't exist, it will return result of main approach
-func show_result() -> void:
+func print_output() -> void:
 	if not has_runned:
 		run()
 	if has_updated:
-		buffer.show_result()
+		buffer.print_output()
 		return
-	main.show_result()
+	main.print_output()
 
 ## returns copy of [member RLNNET.main]
 func get_main() -> NNET:
