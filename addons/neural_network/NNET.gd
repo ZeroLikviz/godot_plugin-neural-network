@@ -12,10 +12,6 @@
 class_name NNET
 ## R_0_1 from 0 to 1 [br]
 ## R_M1_1 from -1 to 1
-enum RangeN{
-	R_0_1 = 0,
-	R_M1_1 = 1
-}
 
 var get_bias : Callable = func(layer : int, neuron : int) -> float:
 	return 0.0
@@ -50,35 +46,45 @@ var last_layer: int
 ## it is a component that indicates when a neural network should or should not use biases (offsets)
 var is_using_bias: bool = false
 ## it is range, it can be only from 0 to 1 (RangeN.R_0_1), or from -1 to 1 (RangeN.R_M1_1)
-var range_member: RangeN
-## The variable tfd, short for "true f'()", is utilized within the "train" function. When tfd is set to false, the function f'() undergoes substitution with the value of 1.0.
-var tfd: bool
+var range_member: TheRange
+## The variable true_fd, short for "true f'()", is utilized within the "train" function. When true_fd is set to false, the function f'() undergoes substitution with the value of 1.0.
+var true_fd: bool
 ## This variable used for optimization. It helps to avoid unnecessary runs.
 var train_run: bool = true
 ## That is like hash table, but that is just a 3D array. Used for optimization
 var weights_table : Array = []
 
+class TheRange:
+	var min_value : float
+	var max_value : float
+	
+	# provide it parameter that ranges from 0 to 1
+	func rearrange(value : float) -> float:
+		return min_value + value * (max_value - min_value)
+	
+	func _init(min : float, max : float) -> void:
+		var boolean : int = int(min > max)
+		min_value = min * (1 - boolean) + max * boolean
+		max_value = max * (1 - boolean) + min * boolean
+	
+	func duplicate() -> TheRange:
+		return TheRange.new(min_value, max_value)
+	func assign(buffer : TheRange) -> void:
+		min_value = buffer.min_value
+		max_value = buffer.max_value
 
-func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, range_value: RangeN = RangeN.R_0_1, tfd_value : bool = false) -> void:
+func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, range_value: TheRange = TheRange.new(0.0,1.0), true_fd_value : bool = false) -> void:
 	learning_rate = learning_rate_value
 	is_using_bias = use_bias
 	range_member = range_value
-	if range_member == RangeN.R_0_1:
-		f = func (x : float) -> float:
-			return 1.0 / (pow(2.7182, -x) + 1.0)
-	else:
-		f = func (x : float) -> float:
-			return (2.0 / (1.0 + pow(2.7182, -2.0 * x))) - 1.0
-	if tfd:
-		if range_member == RangeN.R_0_1:
-			fd = func (x : float) -> float:
-				return 1.0 - pow(f.call(x), 2)
-		else:
-			fd = func (x : float) -> float:
-				return f.call(x) * (1.0 - f.call(x))
-	tfd = tfd_value
-	var minw: float = -1.0
-	var maxw: float = 1.0
+	f = func (x : float) -> float:
+		return 1.0 / (pow(2.7182, -x) + 1.0)
+	
+	if true_fd_value:
+		fd = func (x : float) -> float:
+			return 1.0 - pow(f.call(x), 2)
+	true_fd = true_fd_value
+	
 	layers = layers_construction
 	layers_size = layers.size()
 	last_layer = layers_size - 1
@@ -110,7 +116,7 @@ func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0,
 	
 	
 	while i < weights_size:
-		weights[i] = randf_range(minw, maxw)
+		weights[i] = randf_range(-1.0, 1.0)
 		i += 1
 	output.resize(layers[last_layer])
 	output.fill(0.0)
@@ -126,7 +132,7 @@ func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0,
 			biases[i].resize(layers[i + 1])
 			var j : int = 0
 			while j < biases[i].size():
-				biases[i][j] = randf_range(minw, maxw)
+				biases[i][j] = randf_range(-1.0, 1.0)
 				j += 1
 			i += 1
 	
@@ -160,13 +166,13 @@ func get_tabled_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> 
 
 ## This function is responsible for assigning the desired output value for the neural network.
 func set_desired_output(desired_output: Array[float]) -> void:
-	assert(desired_output.size() == layers[last_layer], "set_desired_output: sizes doesn't match")
+	assert(desired_output.size() == layers[last_layer], "set_desired_output: sizes doesn't fit")
 	output = desired_output.duplicate(true)
 	train_run = true
 
 ## This function is responsible for assigning the input value for the neural network.
 func set_input(input: Array[float]) -> void:
-	assert(input.size() == layers[0], "set_input: sizes doesn't match")
+	assert(input.size() == layers[0], "set_input: sizes doesn't fit")
 	neurons_in[0] = input.duplicate(true)
 	neurons_out[0] = input.duplicate(true)
 	train_run = true
@@ -277,21 +283,20 @@ func train(laps : int = 1) -> void:
 
 ## returns a copy of the last layer of neurons_out ( see [member NNET.neurons_out] )
 func get_output() -> Array:
-	return neurons_out[last_layer].duplicate(true)
+	var buffer = neurons_out[last_layer].duplicate(true)
+	var i : int = 0
+	while i < buffer.size():
+		buffer[i] = range_member.rearrange(buffer[i])
+		i += 1
+	return buffer
 
 ## prints result (output) in console
-func show_result() -> void:
-	var size: int = layers[last_layer]
-	var console : String = ""
-	var i : int = 0
-	while i < size:
-		console += "[" + str(neurons_out[last_layer][i]) + "]" + " "
-		i += 1
-	print(console)
+func print_output() -> void:
+	print(get_output())
 
 
 func duplicate():
-	var buffer = NNET.new(layers, learning_rate, is_using_bias, range_member, tfd)
+	var buffer = NNET.new(layers, learning_rate, is_using_bias, range_member.duplicate(), true_fd)
 	buffer.output.assign(output)
 	buffer.neurons_out[last_layer].assign(neurons_out[last_layer])
 	buffer.neurons_out[0].assign(neurons_out[0])
@@ -308,9 +313,9 @@ func assign(buffer : NNET) -> void:
 	biases.assign(buffer.biases.duplicate(true))
 	weights.assign(buffer.weights)
 	deltas.assign(buffer.deltas.duplicate(true))
-	tfd = buffer.tfd
+	range_member.assign(buffer.range_member)
+	true_fd = buffer.true_fd
 	train_run = buffer.train_run
-	range_member = buffer.range_member
 	learning_rate = buffer.learning_rate
 	is_using_bias = buffer.is_using_bias
 	layers_size = buffer.layers_size
@@ -328,9 +333,11 @@ func save_data(file_name : String) -> void:
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.WRITE)
+	
 	file.store_8(int(is_using_bias))
-	file.store_8(range_member)
-	file.store_8(int(tfd))
+	file.store_double(range_member.min_value)
+	file.store_double(range_member.max_value)
+	file.store_8(int(true_fd))
 	file.store_64(layers_size)
 	for layer in layers:
 		file.store_64(layer)
@@ -350,14 +357,17 @@ func load_data(file_name : String) -> int:
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.READ)
+	
 	if file.get_8() != int(is_using_bias):
-		push_error("neural network structure doesn't match")
+		push_error("NNET.gd push_error LINE 362: neural network structure doesn't fit")
 		return -1
-	file.get_16()
+	file.get_double()
+	file.get_double()
+	file.get_8()
 	file.get_64()
 	for layer in layers:
 		if layer != file.get_64():
-			push_error("neural network structure doesn't match")
+			push_error("NNET.gd push_error LINE 368: neural network structure doesn't fit")
 			assign(buffer)
 			return -1
 	var i : int = 0
@@ -365,7 +375,7 @@ func load_data(file_name : String) -> int:
 		var boolean : bool = not file.eof_reached()
 		if not boolean:
 			corrupted = true
-			push_error("neural network structure doesn't match")
+			push_error("NNET.gd push_error LINE 376: neural network structure doesn't fit")
 			assign(buffer)
 			return -1
 		weights[i] = file.get_double()
@@ -377,7 +387,7 @@ func load_data(file_name : String) -> int:
 			var boolean : bool = not file.eof_reached()
 			if not boolean:
 				corrupted = true
-				push_error("neural network structure doesn't match")
+				push_error("NNET.gd push_error LINE 388: neural network structure doesn't fit")
 				assign(buffer)
 				return -1
 			biases[i][j] = file.get_double()
@@ -387,7 +397,7 @@ func load_data(file_name : String) -> int:
 	file.get_double()
 	if corrupted or not file.eof_reached():
 		assign(buffer)
-		push_error("neural network structure doesn't match")
+		push_error("NNET.gd push_error LINE 398: neural network structure doesn't fit")
 		return -1
 	file.close()
 	fill_table_of_weights()
@@ -395,21 +405,39 @@ func load_data(file_name : String) -> int:
 
 ## This function copies neural network from file. That is similar to load_data() function, but this function copies everything including structure
 func copy_from_file(file_name : String) -> void:
-	var file =  FileAccess.open("res://addons/neural_network/data/" + file_name, FileAccess.READ)
+	var file = FileAccess.open("res://addons/neural_network/data/" + file_name, FileAccess.READ)
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.READ)
 	var bias_fbool : bool = file.get_8()
-	var range_fvalue = file.get_8()
-	var tfd_fvalue = file.get_8()
-	var structure_farray = []
+	var range_fmin = file.get_double()
+	var range_fmax = file.get_double()
+	var true_fd_fvalue = file.get_8()
 	var size = file.get_64()
+	var structure_farray = []
 	var i : int = 0
 	while i < size:
 		structure_farray.append(file.get_64())
 		i += 1
-	var buffer : NNET = NNET.new(structure_farray, learning_rate, bias_fbool, range_fvalue, tfd_fvalue)
+	var buffer : NNET = NNET.new(structure_farray, learning_rate, bias_fbool, TheRange.new(range_fmin, range_fmax), true_fd_fvalue)
 	file.close()
 	buffer.load_data(file_name)
 	assign(buffer)
 	fill_table_of_weights()
+
+func change_range(min : float, max : float) -> void:
+	range_member = TheRange.new(min,max)
+
+func print_info(NeuralNetworkName : String, offset : int = 0) -> void:
+	var offset_string : String = ""
+	var iterator : int = 0
+	while iterator < offset:
+		offset_string += " "
+		iterator += 1
+	print_rich(offset_string + "[color=white][u]" + NeuralNetworkName + "[/u][/color]" + " :")
+	print(offset_string + "    structure:     " + str(layers))
+	print(offset_string + "    bias using:    " + str(is_using_bias))
+	print(offset_string + "    learning rate: " + str(learning_rate))
+	print(offset_string + "    range: from    " + str(range_member.min_value) + " to " + str(range_member.max_value))
+	print(offset_string + "    true f'():     " + str(true_fd))
+	print(offset_string + "    weights:       " + str(weights))
