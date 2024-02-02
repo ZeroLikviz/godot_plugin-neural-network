@@ -1,58 +1,38 @@
-## Class for basic neural networks
-## 
-## provides basic functional for controlling neural network [br]
-## usually you need 5 functions:
-## - [method NNET.set_input] to set input
-## - [method NNET.set_desired_output] to set desired output
-## - [method NNET.run] to run neural_network
-## - [method NNET.get_output] to get output from neural_network after you ran it (otherwise output will contain only zeros)
-## - [method NNET.train] to train neural_network
-
 @icon("res://addons/neural_network/NNET icon.png")
 class_name NNET
-## R_0_1 from 0 to 1 [br]
-## R_M1_1 from -1 to 1
+
+const VERSION : int = 140
 
 var get_bias : Callable = func(layer : int, neuron : int) -> float:
 	return 0.0
 var f : Callable
 var fd : Callable = func(x : float) -> float:
 	return 1.0
-## output of neurons
 var neurons_out: Array[Array] = []
-## input of neurons
 var neurons_in: Array[Array] = []
-## data used in train function
 var deltas: Array[Array] = []
-## biases
 var biases: Array[Array] = []
-## this member contains weights
 var weights: Array = []
-## desired output
 var output: Array = []
-## construction of a neural network, like [1,8,2] [br]
-## 1 input neuron [br]
-## 1 hidden layer, which contains 8 neurons [br]
-## 2 output neurons [br]
-## [br]
-## "layers" contains amount of neurons in each layer, it doesn't contain layers itself
 var layers: Array = []
-## it is a learning rate. Opting for a higher learning rate facilitates accelerated learning; however, it may come at the expense of compromising the quality of the obtained outcomes. 
 var learning_rate: float
-## amount of layers
 var layers_size: int
-## index of the last layer
 var last_layer: int
-## it is a component that indicates when a neural network should or should not use biases (offsets)
 var is_using_bias: bool = false
-## it is range, it can be only from 0 to 1 (RangeN.R_0_1), or from -1 to 1 (RangeN.R_M1_1)
 var range_member: TheRange
-## The variable true_fd, short for "true f'()", is utilized within the "train" function. When true_fd is set to false, the function f'() undergoes substitution with the value of 1.0.
 var true_fd: bool
-## This variable used for optimization. It helps to avoid unnecessary runs.
 var train_run: bool = true
-## That is like hash table, but that is just a 3D array. Used for optimization
 var weights_table : Array = []
+
+enum ActivationFunction
+{
+	linear,
+	sigmoid,
+	RELu,
+	custom
+}
+
+var activation_function_info : int = ActivationFunction.sigmoid
 
 class TheRange:
 	var min_value : float
@@ -61,6 +41,9 @@ class TheRange:
 	# provide it parameter that ranges from 0 to 1
 	func rearrange(value : float) -> float:
 		return min_value + value * (max_value - min_value)
+	
+	func restore(value : float) -> float:
+		return (value - min_value) / (max_value - min_value)
 	
 	func _init(min : float, max : float) -> void:
 		var boolean : int = int(min > max)
@@ -77,8 +60,8 @@ func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0,
 	learning_rate = learning_rate_value
 	is_using_bias = use_bias
 	range_member = range_value
-	f = func (x : float) -> float:
-		return 1.0 / (pow(2.7182, -x) + 1.0)
+	
+	set_function(ActivationFunction.sigmoid)
 	
 	if true_fd_value:
 		fd = func (x : float) -> float:
@@ -164,28 +147,37 @@ func get_tabled_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> 
 	neuron2 = buffer * bool1 + neuron2 * bool2
 	return weights_table[layer1][neuron1][neuron2]
 
-## This function is responsible for assigning the desired output value for the neural network.
-func set_desired_output(desired_output: Array[float]) -> void:
+func set_function(function : ActivationFunction) -> void:
+	match function:
+		ActivationFunction.linear:
+			f = func (x : float) -> float:
+				return x
+		ActivationFunction.sigmoid:
+			f = func (x : float) -> float:
+				return 1.0 / (pow(2.7182, -x) + 1.0)
+		ActivationFunction.RELu:
+			f = func (x : float) -> float:
+				return max(0.0, x)
+	activation_function_info = function
+
+func set_custom_function(function : Callable) -> void:
+	assert(function.get_bound_arguments_count() == 1, "function must have 1 paremeter")
+	assert(typeof(function.get_bound_arguments()[0]) == TYPE_FLOAT, "argument type should be x")
+	f = function
+	activation_function_info = ActivationFunction.custom
+
+func set_desired_output(desired_output: Array[float], restore_by_range : bool = true) -> void:
 	assert(desired_output.size() == layers[last_layer], "set_desired_output: sizes doesn't fit")
-	output = desired_output.duplicate(true)
+	if restore_by_range: output = desired_output.duplicate(true).map(func(value): return range_member.restore(value))
+	else: output = desired_output.duplicate(true)
 	train_run = true
 
-## This function is responsible for assigning the input value for the neural network.
 func set_input(input: Array[float]) -> void:
 	assert(input.size() == layers[0], "set_input: sizes doesn't fit")
 	neurons_in[0] = input.duplicate(true)
 	neurons_out[0] = input.duplicate(true)
 	train_run = true
 
-## you shouldn't use this function, but in case if you want here how it works: [br]
-## provide two neurons present in distinct layers, and the function shall yield the weight index connecting these two neurons.
-## here's an example:
-## [codeblock]
-##     ...
-##     var index : int = neural_network.get_weight(0,0,1,4)
-##     #don't do what I'm gonna show you
-##     neural_network.weights[index] = SomeFloatValueThatEvilUserUsedToChangeOneOfTheWeights
-## [/codeblock]
 func get_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
 	if layer1 > layer2:
 		var buff1 = layer1
@@ -201,7 +193,7 @@ func get_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
 		i += 1
 	weight_position += neuron1 * layers[layer2] + neuron2
 	return weight_position
-## This function employs a neural network model to execute computations and generate output
+
 func run() -> void:
 	train_run = false
 	var layer : int = 1
@@ -236,21 +228,7 @@ func compute_deltas() -> void:
 			deltas[layer][neuron] *= fd.call(neurons_in[layer][neuron])
 			neuron += 1
 		layer -= 1
-## Member laps refers to the number of iterations through which this function will be repeatedly executed [br]
-##
-## [codeblock]neural_network.train(someValue)[/codeblock]
-## equals to
-## [codeblock]
-## var i : int = 0
-## while i < someValue:
-##     i += 1
-##     neural_network.train()
-## [/codeblock]
-## or
-## [codeblock]
-## for i in range(someValue):
-##     neural_network.train()
-## [/codeblock]
+
 func train(laps : int = 1) -> void:
 	var lap : int = 0
 	while lap < laps:
@@ -281,19 +259,16 @@ func train(laps : int = 1) -> void:
 					neuron += 1
 				layer -= 1
 
-## returns a copy of the last layer of neurons_out ( see [member NNET.neurons_out] )
-func get_output() -> Array:
+func get_output(rearrange_by_range : bool = true) -> Array:
 	var buffer = neurons_out[last_layer].duplicate(true)
 	var i : int = 0
-	while i < buffer.size():
+	while i < buffer.size() * int(rearrange_by_range):
 		buffer[i] = range_member.rearrange(buffer[i])
 		i += 1
 	return buffer
 
-## prints result (output) in console
-func print_output() -> void:
-	print(get_output())
-
+func print_output(rearrange_by_range : bool = true) -> void:
+	print(get_output(rearrange_by_range))
 
 func duplicate():
 	var buffer = NNET.new(layers, learning_rate, is_using_bias, range_member.duplicate(), true_fd)
@@ -303,9 +278,11 @@ func duplicate():
 	buffer.neurons_in[0].assign(neurons_in[0])
 	buffer.weights.assign(weights)
 	buffer.biases.assign(biases.duplicate(true))
+	buffer.activation_function_info = activation_function_info
 	return buffer
 
 func assign(buffer : NNET) -> void:
+	set_function(buffer.activation_function_info)
 	output.assign(buffer.output)
 	layers.assign(buffer.layers)
 	neurons_in.assign(buffer.neurons_in.duplicate(true))
@@ -325,7 +302,7 @@ func assign(buffer : NNET) -> void:
 	while i < weights_table.size():
 		weights_table[i] = buffer.weights_table[i].duplicate(true)
 		i += 1
-##  accepts 1 parameter containing the file name with the extension. If the parameter contains the full path, the file will be located at the specified path
+
 func save_data(file_name : String) -> void:
 	if not DirAccess.dir_exists_absolute("res://addons/neural_network/data/"):
 		DirAccess.make_dir_absolute("res://addons/neural_network/data")
@@ -333,7 +310,8 @@ func save_data(file_name : String) -> void:
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.WRITE)
-	
+	file.store_16(VERSION)
+	file.store_8(int(activation_function_info))
 	file.store_8(int(is_using_bias))
 	file.store_double(range_member.min_value)
 	file.store_double(range_member.max_value)
@@ -348,7 +326,6 @@ func save_data(file_name : String) -> void:
 			file.store_double(bias)
 	file.close()
 
-## This function loads data from file into neural network, but in case if structure of neural network in file differs with structure of neural network you trying to load data in, then it will fail (try copy_from_file() function if you want to load data into neural network indepented on structure, but in this case structure of neural network may change). accepts 1 parameter containing the file name with the extension. If the parameter contains the full path, the data will be loaded from the full path. Function returns 0 on successful loading and -1 on fail.
 func load_data(file_name : String) -> int:
 	var buffer : NNET = duplicate()
 	var corrupted: bool = false
@@ -358,16 +335,17 @@ func load_data(file_name : String) -> int:
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.READ)
 	
+	file.get_16()
+	set_function(file.get_8())
 	if file.get_8() != int(is_using_bias):
-		push_error("NNET.gd push_error LINE 362: neural network structure doesn't fit")
+		push_error("NNET.gd push_error LINE 368: neural network structure doesn't fit")
 		return -1
-	file.get_double()
-	file.get_double()
+	set_range(file.get_double(), file.get_double())
 	file.get_8()
 	file.get_64()
 	for layer in layers:
 		if layer != file.get_64():
-			push_error("NNET.gd push_error LINE 368: neural network structure doesn't fit")
+			push_error("NNET.gd push_error LINE 376: neural network structure doesn't fit")
 			assign(buffer)
 			return -1
 	var i : int = 0
@@ -387,7 +365,7 @@ func load_data(file_name : String) -> int:
 			var boolean : bool = not file.eof_reached()
 			if not boolean:
 				corrupted = true
-				push_error("NNET.gd push_error LINE 388: neural network structure doesn't fit")
+				push_error("NNET.gd push_error LINE 396: neural network structure doesn't fit")
 				assign(buffer)
 				return -1
 			biases[i][j] = file.get_double()
@@ -397,18 +375,19 @@ func load_data(file_name : String) -> int:
 	file.get_double()
 	if corrupted or not file.eof_reached():
 		assign(buffer)
-		push_error("NNET.gd push_error LINE 398: neural network structure doesn't fit")
+		push_error("NNET.gd push_error LINE 406: neural network structure doesn't fit")
 		return -1
 	file.close()
 	fill_table_of_weights()
 	return 0
 
-## This function copies neural network from file. That is similar to load_data() function, but this function copies everything including structure
 func copy_from_file(file_name : String) -> void:
 	var file = FileAccess.open("res://addons/neural_network/data/" + file_name, FileAccess.READ)
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.READ)
+	file.get_16()
+	file.get_8()
 	var bias_fbool : bool = file.get_8()
 	var range_fmin = file.get_double()
 	var range_fmax = file.get_double()
@@ -425,7 +404,7 @@ func copy_from_file(file_name : String) -> void:
 	assign(buffer)
 	fill_table_of_weights()
 
-func change_range(min : float, max : float) -> void:
+func set_range(min : float, max : float) -> void:
 	range_member = TheRange.new(min,max)
 
 func print_info(NeuralNetworkName : String, offset : int = 0) -> void:
@@ -435,9 +414,15 @@ func print_info(NeuralNetworkName : String, offset : int = 0) -> void:
 		offset_string += " "
 		iterator += 1
 	print_rich(offset_string + "[color=white][u]" + NeuralNetworkName + "[/u][/color]" + " :")
-	print(offset_string + "    structure:     " + str(layers))
-	print(offset_string + "    bias using:    " + str(is_using_bias))
-	print(offset_string + "    learning rate: " + str(learning_rate))
-	print(offset_string + "    range: from    " + str(range_member.min_value) + " to " + str(range_member.max_value))
-	print(offset_string + "    true f'():     " + str(true_fd))
-	print(offset_string + "    weights:       " + str(weights))
+	print(offset_string + "    structure:           " + str(layers))
+	print(offset_string + "    bias using:          " + str(is_using_bias))
+	print(offset_string + "    learning rate:       " + str(learning_rate))
+	print(offset_string + "    range:               " + str(range_member.min_value) + " to " + str(range_member.max_value))
+	print(offset_string + "    true f'():           " + str(true_fd))
+	print(offset_string + "    weights:             " + str(weights))
+	var function : String = "custom"
+	match activation_function_info:
+		ActivationFunction.linear  : function = "linear"
+		ActivationFunction.sigmoid : function = "sigmoid"
+		ActivationFunction.RELu    : function = "RELu"
+	print(offset_string + "    activation function: " + function)
