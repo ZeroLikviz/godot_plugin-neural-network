@@ -9,8 +9,8 @@ var has_updated : bool = false
 var has_runned : bool = false
 var curiosity_rate : float = 0.1
 
-func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.008, use_bias: bool = true, range_a: NNET.TheRange = NNET.TheRange.new(0.0,1.0), afd_a : bool = false) -> void:
-	main.assign(NNET.new(layers_construction, 0.1, use_bias, range_a, afd_a))
+func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.008, use_bias: bool = true, afd_a : bool = false) -> void:
+	main.assign(NNET.new(layers_construction, 0.1, use_bias, afd_a))
 	buffer.assign(main.duplicate())
 	curiosity_rate = curiosity_rate_a
 
@@ -39,16 +39,16 @@ func run() -> void:
 		main.run()
 	has_runned = true
 
-func get_output() -> Array:
+func get_output(transform : bool = false) -> Array:
 	if not has_runned:
 		run()
 	if has_updated:
-		return buffer.get_output()
-	return main.get_output()
+		return buffer.get_output(transform)
+	return main.get_output(transform)
 
-func get_main_output() -> Array:
+func get_main_output(transform : bool = false) -> Array:
 	main.run()
-	return main.get_output()
+	return main.get_output(transform)
 
 func set_reward(value : float) -> void:
 	if not has_updated:
