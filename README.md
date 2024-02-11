@@ -1,3 +1,10 @@
+DOCUMENTATION IS NOT USEFUL ANYMORE. I will create new documentation about 18-19-th of February.
+- 
+TODO:
+- add user friendly functions to GPUNNET class
+- create new documentation
+
+
 The add-on provides 2 classes: NNET and RLNNET. NNET stands for NeuralNet Toolkit, while RLNNET stands for Reinforcement Learning NeuralNet Toolkit.
 
 The distinction between NNET and RLNNET is as follows: NNET employs back propagation for training, whereas RLNNET utilizes reinforcement learning.
