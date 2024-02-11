@@ -19,7 +19,6 @@ var learning_rate: float
 var layers_size: int
 var last_layer: int
 var is_using_bias: bool = false
-var range_member: TheRange
 var true_fd: bool
 var train_run: bool = true
 var weights_table : Array = []
@@ -28,7 +27,7 @@ enum ActivationFunction
 {
 	linear,
 	sigmoid,
-	RELu,
+	ReLU,
 	custom
 }
 
@@ -56,10 +55,9 @@ class TheRange:
 		min_value = buffer.min_value
 		max_value = buffer.max_value
 
-func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, range_value: TheRange = TheRange.new(0.0,1.0), true_fd_value : bool = false) -> void:
+func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value : bool = false) -> void:
 	learning_rate = learning_rate_value
 	is_using_bias = use_bias
-	range_member = range_value
 	
 	set_function(ActivationFunction.sigmoid)
 	
@@ -155,7 +153,7 @@ func set_function(function : ActivationFunction) -> void:
 		ActivationFunction.sigmoid:
 			f = func (x : float) -> float:
 				return 1.0 / (pow(2.7182, -x) + 1.0)
-		ActivationFunction.RELu:
+		ActivationFunction.ReLU:
 			f = func (x : float) -> float:
 				return max(0.0, x)
 	activation_function_info = function
@@ -166,10 +164,9 @@ func set_custom_function(function : Callable) -> void:
 	f = function
 	activation_function_info = ActivationFunction.custom
 
-func set_desired_output(desired_output: Array[float], restore_by_range : bool = true) -> void:
+func set_desired_output(desired_output: Array[float]) -> void:
 	assert(desired_output.size() == layers[last_layer], "set_desired_output: sizes doesn't fit")
-	if restore_by_range: output = desired_output.duplicate(true).map(func(value): return range_member.restore(value))
-	else: output = desired_output.duplicate(true)
+	output = desired_output.duplicate(true)
 	train_run = true
 
 func set_input(input: Array[float]) -> void:
@@ -259,30 +256,34 @@ func train(laps : int = 1) -> void:
 					neuron += 1
 				layer -= 1
 
-func get_output(rearrange_by_range : bool = true) -> Array:
+func get_output(transform : bool = false) -> Array:
 	var buffer = neurons_out[last_layer].duplicate(true)
 	var i : int = 0
-	while i < buffer.size() * int(rearrange_by_range):
-		buffer[i] = range_member.rearrange(buffer[i])
+	while i < buffer.size() * int(transform):
+		buffer[i] = buffer[i] * 2 - 1
 		i += 1
 	return buffer
 
-func print_output(rearrange_by_range : bool = true) -> void:
+func print_output(rearrange_by_range : bool = false) -> void:
 	print(get_output(rearrange_by_range))
 
 func duplicate():
-	var buffer = NNET.new(layers, learning_rate, is_using_bias, range_member.duplicate(), true_fd)
+	var buffer = NNET.new(layers, learning_rate, is_using_bias, true_fd)
 	buffer.output.assign(output)
 	buffer.neurons_out[last_layer].assign(neurons_out[last_layer])
 	buffer.neurons_out[0].assign(neurons_out[0])
 	buffer.neurons_in[0].assign(neurons_in[0])
 	buffer.weights.assign(weights)
 	buffer.biases.assign(biases.duplicate(true))
-	buffer.activation_function_info = activation_function_info
+	if activation_function_info != ActivationFunction.custom:
+		buffer.set_function(activation_function_info)
+	else: buffer.set_custom_function(f)
 	return buffer
 
 func assign(buffer : NNET) -> void:
-	set_function(buffer.activation_function_info)
+	if buffer.activation_function_info == ActivationFunction.custom:
+		set_custom_function(buffer.f)
+	else: set_function(buffer.activation_function_info)
 	output.assign(buffer.output)
 	layers.assign(buffer.layers)
 	neurons_in.assign(buffer.neurons_in.duplicate(true))
@@ -290,7 +291,6 @@ func assign(buffer : NNET) -> void:
 	biases.assign(buffer.biases.duplicate(true))
 	weights.assign(buffer.weights)
 	deltas.assign(buffer.deltas.duplicate(true))
-	range_member.assign(buffer.range_member)
 	true_fd = buffer.true_fd
 	train_run = buffer.train_run
 	learning_rate = buffer.learning_rate
@@ -313,8 +313,6 @@ func save_data(file_name : String) -> void:
 	file.store_16(VERSION)
 	file.store_8(int(activation_function_info))
 	file.store_8(int(is_using_bias))
-	file.store_double(range_member.min_value)
-	file.store_double(range_member.max_value)
 	file.store_8(int(true_fd))
 	file.store_64(layers_size)
 	for layer in layers:
@@ -338,14 +336,15 @@ func load_data(file_name : String) -> int:
 	file.get_16()
 	set_function(file.get_8())
 	if file.get_8() != int(is_using_bias):
-		push_error("NNET.gd push_error LINE 368: neural network structure doesn't fit")
+		printerr("NNET.gd printerr LINE 368: neural network structure doesn't fit")
 		return -1
-	set_range(file.get_double(), file.get_double())
 	file.get_8()
-	file.get_64()
+	if layers_size != file.get_64():
+		printerr("NNET.gd printerr LINE 339: neural network structure doesn't fit")
+		return -1
 	for layer in layers:
 		if layer != file.get_64():
-			push_error("NNET.gd push_error LINE 376: neural network structure doesn't fit")
+			printerr("NNET.gd printerr LINE 376: neural network structure doesn't fit")
 			assign(buffer)
 			return -1
 	var i : int = 0
@@ -353,7 +352,7 @@ func load_data(file_name : String) -> int:
 		var boolean : bool = not file.eof_reached()
 		if not boolean:
 			corrupted = true
-			push_error("NNET.gd push_error LINE 376: neural network structure doesn't fit")
+			printerr("NNET.gd printerr LINE 376: neural network structure doesn't fit")
 			assign(buffer)
 			return -1
 		weights[i] = file.get_double()
@@ -365,7 +364,7 @@ func load_data(file_name : String) -> int:
 			var boolean : bool = not file.eof_reached()
 			if not boolean:
 				corrupted = true
-				push_error("NNET.gd push_error LINE 396: neural network structure doesn't fit")
+				printerr("NNET.gd printerr LINE 396: neural network structure doesn't fit")
 				assign(buffer)
 				return -1
 			biases[i][j] = file.get_double()
@@ -375,7 +374,7 @@ func load_data(file_name : String) -> int:
 	file.get_double()
 	if corrupted or not file.eof_reached():
 		assign(buffer)
-		push_error("NNET.gd push_error LINE 406: neural network structure doesn't fit")
+		printerr("NNET.gd printerr LINE 406: neural network structure doesn't fit")
 		return -1
 	file.close()
 	fill_table_of_weights()
@@ -387,10 +386,8 @@ func copy_from_file(file_name : String) -> void:
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.READ)
 	file.get_16()
-	file.get_8()
+	var function_info_file = file.get_8()
 	var bias_fbool : bool = file.get_8()
-	var range_fmin = file.get_double()
-	var range_fmax = file.get_double()
 	var true_fd_fvalue = file.get_8()
 	var size = file.get_64()
 	var structure_farray = []
@@ -398,14 +395,12 @@ func copy_from_file(file_name : String) -> void:
 	while i < size:
 		structure_farray.append(file.get_64())
 		i += 1
-	var buffer : NNET = NNET.new(structure_farray, learning_rate, bias_fbool, TheRange.new(range_fmin, range_fmax), true_fd_fvalue)
+	var buffer : NNET = NNET.new(structure_farray, learning_rate, bias_fbool, true_fd_fvalue)
 	file.close()
 	buffer.load_data(file_name)
 	assign(buffer)
+	set_function(function_info_file)
 	fill_table_of_weights()
-
-func set_range(min : float, max : float) -> void:
-	range_member = TheRange.new(min,max)
 
 func print_info(NeuralNetworkName : String, offset : int = 0) -> void:
 	var offset_string : String = ""
@@ -417,12 +412,11 @@ func print_info(NeuralNetworkName : String, offset : int = 0) -> void:
 	print(offset_string + "    structure:           " + str(layers))
 	print(offset_string + "    bias using:          " + str(is_using_bias))
 	print(offset_string + "    learning rate:       " + str(learning_rate))
-	print(offset_string + "    range:               " + str(range_member.min_value) + " to " + str(range_member.max_value))
 	print(offset_string + "    true f'():           " + str(true_fd))
 	print(offset_string + "    weights:             " + str(weights))
 	var function : String = "custom"
 	match activation_function_info:
 		ActivationFunction.linear  : function = "linear"
 		ActivationFunction.sigmoid : function = "sigmoid"
-		ActivationFunction.RELu    : function = "RELu"
+		ActivationFunction.ReLU    : function = "ReLU"
 	print(offset_string + "    activation function: " + function)
