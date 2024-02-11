@@ -2,7 +2,10 @@ DOCUMENTATION IS USELESS. I will create new documentation about 18-19-th of Febr
 - 
 TODO:
 - add user friendly functions to GPUNNET class
-- create new documentation
+- create new documentation and learn how to create good documentations
+
+
+### Old documentation:
 
 
 The add-on provides 2 classes: NNET and RLNNET. NNET stands for NeuralNet Toolkit, while RLNNET stands for Reinforcement Learning NeuralNet Toolkit.
