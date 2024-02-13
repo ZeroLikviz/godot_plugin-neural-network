@@ -1,8 +1,6 @@
 @icon("res://addons/neural_network/NNET icon.png")
 class_name NNET
 
-const VERSION : int = 140
-
 var get_bias : Callable = func(layer : int, neuron : int) -> float:
 	return 0.0
 var f : Callable
@@ -25,9 +23,10 @@ var weights_table : Array = []
 
 enum ActivationFunction
 {
-	linear,
-	sigmoid,
-	ReLU,
+	linear            ,
+	sigmoid           ,
+	logistic = sigmoid,
+	ReLU              ,
 	custom
 }
 
@@ -55,7 +54,7 @@ class TheRange:
 		min_value = buffer.min_value
 		max_value = buffer.max_value
 
-func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value : bool = false) -> void:
+func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value : bool = true) -> void:
 	learning_rate = learning_rate_value
 	is_using_bias = use_bias
 	
@@ -150,12 +149,21 @@ func set_function(function : ActivationFunction) -> void:
 		ActivationFunction.linear:
 			f = func (x : float) -> float:
 				return x
+			if true_fd:
+				fd = func (x : float) -> float:
+					return 1.0
 		ActivationFunction.sigmoid:
 			f = func (x : float) -> float:
 				return 1.0 / (pow(2.7182, -x) + 1.0)
+			if true_fd:
+				fd = func (x : float) -> float:
+					return f.call(x) * (1.0 - f.call(x))
 		ActivationFunction.ReLU:
 			f = func (x : float) -> float:
 				return max(0.0, x)
+			if true_fd:
+				fd = func (x : float) -> float:
+					return max(0.0, x) / x;
 	activation_function_info = function
 
 func set_custom_function(function : Callable) -> void:
@@ -163,6 +171,9 @@ func set_custom_function(function : Callable) -> void:
 	assert(typeof(function.get_bound_arguments()[0]) == TYPE_FLOAT, "argument type should be x")
 	f = function
 	activation_function_info = ActivationFunction.custom
+	if true_fd:
+		fd = func (x : float) -> float:
+			return (f.call(x + 0.00001) - f.call(x)) / 0.00001
 
 func set_desired_output(desired_output: Array[float]) -> void:
 	assert(desired_output.size() == layers[last_layer], "set_desired_output: sizes doesn't fit")
@@ -310,7 +321,6 @@ func save_data(file_name : String) -> void:
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.WRITE)
-	file.store_16(VERSION)
 	file.store_8(int(activation_function_info))
 	file.store_8(int(is_using_bias))
 	file.store_8(int(true_fd))
@@ -333,18 +343,19 @@ func load_data(file_name : String) -> int:
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.READ)
 	
-	file.get_16()
-	set_function(file.get_8())
+	var info : int = file.get_8()
 	if file.get_8() != int(is_using_bias):
-		printerr("NNET.gd printerr LINE 368: neural network structure doesn't fit")
+		printerr("NNET.gd printerr LINE 348: neural network structure doesn't fit")
+		assign(buffer)
 		return -1
-	file.get_8()
+	true_fd = file.get_8(); set_function(info)
 	if layers_size != file.get_64():
-		printerr("NNET.gd printerr LINE 339: neural network structure doesn't fit")
+		printerr("NNET.gd printerr LINE 353: neural network structure doesn't fit")
+		assign(buffer)
 		return -1
 	for layer in layers:
 		if layer != file.get_64():
-			printerr("NNET.gd printerr LINE 376: neural network structure doesn't fit")
+			printerr("NNET.gd printerr LINE 358: neural network structure doesn't fit")
 			assign(buffer)
 			return -1
 	var i : int = 0
@@ -352,7 +363,7 @@ func load_data(file_name : String) -> int:
 		var boolean : bool = not file.eof_reached()
 		if not boolean:
 			corrupted = true
-			printerr("NNET.gd printerr LINE 376: neural network structure doesn't fit")
+			printerr("NNET.gd printerr LINE 366: neural network structure doesn't fit")
 			assign(buffer)
 			return -1
 		weights[i] = file.get_double()
@@ -364,7 +375,7 @@ func load_data(file_name : String) -> int:
 			var boolean : bool = not file.eof_reached()
 			if not boolean:
 				corrupted = true
-				printerr("NNET.gd printerr LINE 396: neural network structure doesn't fit")
+				printerr("NNET.gd printerr LINE 378: neural network structure doesn't fit")
 				assign(buffer)
 				return -1
 			biases[i][j] = file.get_double()
@@ -374,7 +385,7 @@ func load_data(file_name : String) -> int:
 	file.get_double()
 	if corrupted or not file.eof_reached():
 		assign(buffer)
-		printerr("NNET.gd printerr LINE 406: neural network structure doesn't fit")
+		printerr("NNET.gd printerr LINE 388: neural network structure doesn't fit")
 		return -1
 	file.close()
 	fill_table_of_weights()
@@ -385,7 +396,6 @@ func copy_from_file(file_name : String) -> void:
 	if file_name.begins_with("res://") or file_name.begins_with("user://"):
 		file.close()
 		file = FileAccess.open(file_name, FileAccess.READ)
-	file.get_16()
 	var function_info_file = file.get_8()
 	var bias_fbool : bool = file.get_8()
 	var true_fd_fvalue = file.get_8()
@@ -417,6 +427,6 @@ func print_info(NeuralNetworkName : String, offset : int = 0) -> void:
 	var function : String = "custom"
 	match activation_function_info:
 		ActivationFunction.linear  : function = "linear"
-		ActivationFunction.sigmoid : function = "sigmoid"
+		ActivationFunction.sigmoid : function = "sigmoid (logistic)"
 		ActivationFunction.ReLU    : function = "ReLU"
 	print(offset_string + "    activation function: " + function)
