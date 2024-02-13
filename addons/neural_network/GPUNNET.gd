@@ -44,7 +44,7 @@ func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float =
 	random_weights.resize(x_component * (y_component ** 2) * 4)
 	i = 0; while i < x_component * (y_component ** 2): random_weights.encode_float(i * 4, randf_range(-1.0, 1.0)); i += 1
 	
-	common_data            = device.storage_buffer_create(4                            * 4 + 1)
+	common_data            = device.storage_buffer_create(5                                * 4)
 	bias_storage           = device.storage_buffer_create((x_component - 1) * y_component  * int(use_bias) * 4)
 	deltas_storage         = device.storage_buffer_create((x_component - 1) * y_component        * 4)
 	weights_storage        = device.storage_buffer_create(x_component * (y_component ** 2) * 4, random_weights)
