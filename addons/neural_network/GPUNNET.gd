@@ -80,13 +80,13 @@ func initialize_uniform(rid : RID, binding : int) -> RDUniform:
 
 func fill_data() -> void:
 	var common_data_pba : PackedByteArray = PackedByteArray([])
-	common_data_pba.resize(16)
-	common_data_pba.encode_float( 0, learning_rate )
-	common_data_pba.encode_u32(   4, last_layer    )
-	common_data_pba.encode_u32(   8, layers_size   )
-	common_data_pba.encode_u8 (  12, is_bias_used  )
-	common_data_pba.encode_u32(  13, run           )
-	device.buffer_update(common_data, 0, 16, common_data_pba)
+	common_data_pba.resize(20)
+	common_data_pba.encode_float(  0, learning_rate        )
+	common_data_pba.encode_u32  (  4, last_layer           )
+	common_data_pba.encode_u32  (  8, layers_size          )
+	common_data_pba.encode_float( 12, float(is_bias_used)  )
+	common_data_pba.encode_u32  ( 16, run                  )
+	device.buffer_update(common_data, 0, 20, common_data_pba)
 	
 	var layers_pba : PackedByteArray = PackedByteArray([]); layers_pba.resize(layers_size * 4)
 	var i = 0; while i < layers_size: layers_pba.encode_s32(i * 4, layers[i]); i += 1
