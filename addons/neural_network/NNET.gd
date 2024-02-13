@@ -163,7 +163,7 @@ func set_function(function : ActivationFunction) -> void:
 				return max(0.0, x)
 			if true_fd:
 				fd = func (x : float) -> float:
-					return max(0.0, x) / x;
+					return 1.0;
 	activation_function_info = function
 
 func set_custom_function(function : Callable) -> void:
