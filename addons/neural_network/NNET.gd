@@ -54,7 +54,7 @@ class TheRange:
 		min_value = buffer.min_value
 		max_value = buffer.max_value
 
-func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value : bool = true) -> void:
+func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value : bool = false) -> void:
 	learning_rate = learning_rate_value
 	is_using_bias = use_bias
 	
