@@ -6,16 +6,18 @@ const int FIND_DELTAS = 1;
 const int TRAIN = 2;
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+const mediump uint max_x = gl_WorkGroupSize.x + 1;
 
 layout(set = 0, binding = 0, std430) restrict buffer CommonData {
 	float learning_rate;
-	int  last_layer;
-	int layers_size;
-	int mode;
+	uint  last_layer;
+	uint layers_size;
+	bool bias;
+	uint mode;
 } data;
 
 layout(set = 0, binding = 1, std430) restrict buffer BiasData {
-	float data[];
+	float data[gl_WorkGroupSize.x][gl_WorkGroupSize.y];
 } biases;
 
 layout(set = 0, binding = 2, std430) restrict buffer DeltasData {
@@ -23,7 +25,7 @@ layout(set = 0, binding = 2, std430) restrict buffer DeltasData {
 } deltas;
 
 layout(set = 0, binding = 3, std430) restrict buffer WeightsData {
-	float data[gl_WorkGroupSize.x][gl_WorkGroupSize.y][gl_WorkGroupSize.y];
+	float data[max_x][gl_WorkGroupSize.y][gl_WorkGroupSize.y];
 } weights;
 
 layout(set = 0, binding = 4, std430) restrict buffer StructureData {
@@ -31,7 +33,7 @@ layout(set = 0, binding = 4, std430) restrict buffer StructureData {
 } layers;
 
 layout(set = 0, binding = 5, std430) restrict buffer OutputNeurons {
-	float data[gl_WorkGroupSize.x][gl_WorkGroupSize.y];
+	float data[max_x][gl_WorkGroupSize.y];
 } output_neurons;
 
 layout(set = 0, binding = 6, std430) restrict buffer DesiredOutput {
@@ -51,40 +53,45 @@ float fd(float x)
 void main() {
 	mediump uint x = gl_WorkGroupID.x;
 	mediump uint y = gl_WorkGroupID.y;
-	mediump uint max_x = gl_WorkGroupSize.x;
-	if( gl_WorkGroupID.y < layers.data[x] && gl_WorkGroupID.x != 0 )
+	switch( data.mode )
 	{
-		switch( data.mode )
-		{
-			case RUN:
+		case RUN:
+			x += 1;
+			if(y < layers.data[x])
+			{
+				output_neurons.data[x][y] = biases.data[gl_WorkGroupID.x][y] * float(data.bias);
 				for(mediump uint i = 0; i < layers.data[x - 1]; ++i)
 				{
 					output_neurons.data[x][y] += output_neurons.data[x - 1][i] * weights.data[x - 1][i][y];
 				}
 				output_neurons.data[x][y] = f(output_neurons.data[x][y]);
-				break;
-			case FIND_DELTAS:
-				x = max_x - x;
-				if( x == max_x - 1)
+			}
+			break;
+		case FIND_DELTAS:
+			x = gl_WorkGroupSize.x - x;
+			if(y < layers.data[x])
+			{
+				if(x == gl_WorkGroupSize.x)
 				{
 					deltas.data[x][y] = (output_neurons.data[x][y] - desired_output.data[y]) * fd(output_neurons.data[x][y]);
+					return;
 				}
-				else
+				for(mediump uint i = 0; i < layers.data[x + 1]; ++i)
 				{
-					for(mediump uint i = 0; i < layers.data[x + 1]; ++i)
-					{
-						deltas.data[x][y] += output_neurons.data[x + 1][i] * weights.data[x][y][i];
-					}
-					deltas.data[x][y] *= fd(output_neurons.data[x][y]);
+					deltas.data[x][y] += deltas.data[x + 1][i] * weights.data[x][y][i];
 				}
-				break;
-			case TRAIN:
-				x -= 1;
+				deltas.data[x][y] = fd(deltas.data[x][y]);
+			}
+			
+			break;
+		case TRAIN:
+			if(y < layers.data[x])
+			{
 				for(mediump uint i = 0; i < layers.data[x + 1]; ++i)
 				{
 					weights.data[x][y][i] -= data.learning_rate * output_neurons.data[x][y] * deltas.data[x + 1][i];
 				}
-				break;
-		}
+			}
+			break;
 	}
 }
