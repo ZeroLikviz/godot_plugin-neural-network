@@ -1,48 +1,50 @@
 #[compute]
 #version 450
 
-const int RUN = 0;
-const int FIND_DELTAS = 1;
-const int TRAIN = 2;
+const uint RUN = 0;
+const uint FIND_DELTAS = 1;
+const uint TRAIN = 2;
+const uint BIAS_TRAIN = 3;
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-const mediump uint max_x = gl_WorkGroupSize.x + 1;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, std430) restrict buffer CommonData {
+layout(set = 0, binding = 0, std430) restrict readonly buffer CommonData {
 	float learning_rate;
 	uint  last_layer;
 	uint layers_size;
+	uint neurons_max;
+	uint layer;
 	float bias;
 	uint mode;
 } data;
 
 layout(set = 0, binding = 1, std430) restrict buffer BiasData {
-	float data[gl_WorkGroupSize.x][gl_WorkGroupSize.y];
+	float data[];
 } biases;
 
 layout(set = 0, binding = 2, std430) restrict buffer DeltasData {
-	float data[gl_WorkGroupSize.x][gl_WorkGroupSize.y];
+	float data[];
 } deltas;
 
 layout(set = 0, binding = 3, std430) restrict buffer WeightsData {
-	float data[max_x][gl_WorkGroupSize.y][gl_WorkGroupSize.y];
+	float data[];
 } weights;
 
-layout(set = 0, binding = 4, std430) restrict buffer StructureData {
-	int data[];
+layout(set = 0, binding = 4, std430) restrict readonly buffer StructureData {
+	uint data[];
 } layers;
 
 layout(set = 0, binding = 5, std430) restrict buffer OutputNeurons {
-	float data[max_x][gl_WorkGroupSize.y];
-} output_neurons;
+	float data[];
+} neurons;
 
-layout(set = 0, binding = 6, std430) restrict buffer DesiredOutput {
-	float data[gl_WorkGroupSize.y];
+layout(set = 0, binding = 6, std430) restrict readonly buffer DesiredOutput {
+	float data[];
 } desired_output;
 
 float f(float x)
 {
-	return 1.0 / pow(2.71828, -x) + 1.0;
+	return 1.0 / ( 1.0 + pow(2.71828, -x) );
 }
 
 float fd(float x)
@@ -50,48 +52,63 @@ float fd(float x)
 	return f(x) * (1.0 - f(x));
 }
 
+uint d2(uint x, uint y)
+{
+	return x * data.neurons_max + y;
+}
+
+uint d3(uint x, uint y, uint z)
+{
+	return x * data.neurons_max * data.neurons_max + y * data.neurons_max + z;
+}
+
 void main() {
-	mediump uint x = gl_WorkGroupID.x;
-	mediump uint y = gl_WorkGroupID.y;
+	uint neuron = gl_WorkGroupID.x * 64 + gl_LocalInvocationID.x * 8 + gl_LocalInvocationID.y;
 	switch( data.mode )
 	{
 		case RUN:
-			x += 1;
-			if(y < layers.data[x])
+		{
+			if( neuron < layers.data[data.layer] )
 			{
-				output_neurons.data[x][y] = biases.data[gl_WorkGroupID.x][y] * data.bias;
-				for(mediump uint i = 0; i < layers.data[x - 1]; ++i)
-				{
-					output_neurons.data[x][y] += output_neurons.data[x - 1][i] * weights.data[x - 1][i][y];
-				}
-				output_neurons.data[x][y] = f(output_neurons.data[x][y]);
+				neurons.data[d2(data.layer, neuron)] = biases.data[d2(data.layer - 1, neuron)] * data.bias;
+				for(uint i = 0; i < layers.data[data.layer - 1]; ++i)
+					neurons.data[d2(data.layer, neuron)] = neurons.data[d2(data.layer - 1, i)] * weights.data[d3(data.layer - 1, i, neuron)];
+				neurons.data[d2(data.layer, neuron)] = f( neurons.data[d2(data.layer, neuron)] );
 			}
-			break;
+			return;
+		};
 		case FIND_DELTAS:
-			x = gl_WorkGroupSize.x - x;
-			if(y < layers.data[x])
+		{
+			if( neuron < layers.data[data.layer] )
 			{
-				if(x == gl_WorkGroupSize.x)
+				if( data.layer == data.last_layer )
 				{
-					deltas.data[x][y] = (output_neurons.data[x][y] - desired_output.data[y]) * fd(output_neurons.data[x][y]);
+					deltas.data[d2(data.layer - 1, neuron)] = (neurons.data[d2(data.layer, neuron)] - desired_output.data[neuron]) * fd( neurons.data[d2(data.layer, neuron)] );
 					return;
 				}
-				for(mediump uint i = 0; i < layers.data[x + 1]; ++i)
-				{
-					deltas.data[x][y] += deltas.data[x + 1][i] * weights.data[x][y][i];
-				}
-				deltas.data[x][y] = fd(deltas.data[x][y]);
+				for(uint i = 0; i < layers.data[data.layer + 1]; ++i )
+					deltas.data[d2(data.layer - 1, neuron)] += deltas.data[d2(data.layer, i)] * weights.data[d3(data.layer, neuron, i)];
+				deltas.data[d2(data.layer - 1, neuron)] *= fd( neurons.data[d2(data.layer, neuron)] );
 			}
-			
-			break;
+			return;
+		};
 		case TRAIN:
-			if(y < layers.data[x])
+		{
+			if( neuron < layers.data[data.layer] )
 			{
-				for(mediump uint i = 0; i < layers.data[x + 1]; ++i)
-				{
-					weights.data[x][y][i] -= data.learning_rate * output_neurons.data[x][y] * deltas.data[x + 1][i];
-				}
+				for(uint i = 0; i < layers.data[data.layer + 1]; ++i)
+					weights.data[d3(data.layer, neuron, i)] -= data.learning_rate * neurons.data[d2(data.layer, neuron)] * deltas.data[d2(data.layer, i)];
 			}
-			break;
+			return;
+		};
+		case BIAS_TRAIN:
+		{
+			if( neuron < layers.data[data.layer + 1] )
+			{
+				biases.data[d2(data.layer, neuron)] -= data.learning_rate * deltas.data[d2(data.layer, neuron)];
+			}
+			return;
+		}
 	}
 }
+
