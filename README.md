@@ -4,102 +4,86 @@ TODO:
 - ~~add user friendly functions to GPUNNET class~~
 - create new documentation and learn how to create good documentations
 
+documentation is in progress...
 
-### Old documentation:
+# NeuralNet Toolkit
+<p align="center">
+<img src="https://i.postimg.cc/435gWN5P/250-20240218003345.png" alt="NNET logotype">
+</p>
+
+-------
+## User guide for working with NNET, RLNNET, GPUNNET classes in your project
 
 
-The add-on provides 2 classes: NNET and RLNNET. NNET stands for NeuralNet Toolkit, while RLNNET stands for Reinforcement Learning NeuralNet Toolkit.
 
-The distinction between NNET and RLNNET is as follows: NNET employs back propagation for training, whereas RLNNET utilizes reinforcement learning.
-
-Usage of NNET
-
-  Neural network initialization
-   The initial step requires you to provide the architecture of your neural network. Firstly, specify the number of input neurons, followed by the sequence of hidden layers, and conclude with the number of output layers in the format [1,6,5,1].
-
-   The second step entails providing the learning rate for the neural network.
-
-   In the third step, you are required to indicate "true" or "false" depending on whether you intend to use bias neurons or not.
-
-   By the fourth step, it is optional to provide a range for the neural network. If no range is specified, the default range will be from 0 to 1.
-
-Here is an example of how it may appear in your code:
-
+## NNET
+To start working with the NNET class, create a variable of the type NNET, here's an example:
 ```GDScript
-  func _ready() -> void:
-	  var neural_network_1 = NNET.new([1,6,5,1], 0.1, true)
-	  var neural_network_2 = NNET.new([5,20,30,40,15], 0.005, true)
-	  var neural_nrtwork_3 = NNET.new([2,1], 0.5, true)
+...
+var neural_network : NNET = NNET.new(...)
+```
+Initialization of \*NNET classes requires some parameters:
+- structure, it may look like that: \[4,13,7,2\] (see <font style="color:red">structure</font>)
+- learning rate
+- true or false depending on whether you are going to use biases or not
+- <font style="color:grey">( Optionally )</font> true or false depending on whether you are going to use f'() or not  (see <font style="color:red">true_fd</font>)
+And now we have something similar to it:
+```GDScript
+var neural_network : NNET = NNET.new([1,5,1], 1.0, true)
 ```
 
-  Training
-  
-   To initiate the training of your neural network, it is imperative to supply input data. Accomplish this by employing the command "set_input()".
-
-   Subsequently, you will need to establish the desired output you aim to obtain. This can be accomplished by utilizing the command "set_desired_output()".
-
-   In the present context, to facilitate the learning process of the neural network, employ the "train()" function. "train()" function accepts an optional parameter that determines the number of training iterations. If this parameter is not specified, it defaults to 1.
-
-  Using
-  
-   To acquire the output of the neural network, firstly execute the "run()" command, followed by the utilization of the "get_output()" function. If you solely desire to display the output in the console, utilize the "show_result()" command.
-
+The neural network's structure looks like the image below if you define its structure as same as mine
+![](https://i.postimg.cc/yN0pWDJP/249-20240217224512.png)
+Neural networks need input data, so provide some. You can do it using the set_input method
 ```GDScript
-func _ready() -> void:
-	  var neural_network = NNET.new([1,3,1], 0.1, true)
-	  
-	  neural_network.set_input([0.5])
-	  neural_network.set_desired_output([0.333])
-	  
-	  neural_network.run()
-	  neural_network.show_result()
-	  
-	  neural_network.train()
-	  print(neural_network.get_output())
-	  
-	  neural_network.train(500)
-	  neural_network.show_result()
+neural_network.set_input([0.2])
 ```
-
-
-Usage of RLNNET
-
-  Neural network initialization
-
-   To begin, you need to define the structure of your neural network. Start by indicating the amount of input neurons, then outline the arrangement of hidden layers, and conclude by specifying the number of output layers.
-
-   In the second step, provide the curiosity (mutation) rate. This parameter indicates the degree of deviation of the new approach from the previous one.
-
-   The remaining steps are identical.
-
-  Training
-
-   The training procedure is presented within an unceasing, continuous loop.
-
-   In the primary stage, it is crucial to provide the input data via the utilization of the function "set_input()".
-   Subsequently, retrieve the output data by employing the function "get_output()".
-   
-   Once the neural network has been tested, evaluate the effectiveness of the output and assign the computed value to the "set_reward()" function. Subsequently, invoke the "update()" function.
-
-   Continue iterating until the desired results are attained.
-
-  Using
-
-   Upon completion of the training procedure, the neural network can be obtained by employing the "get_main()" function.
-
-
-Rough code example:
+Now let's run it and see what result we get
 ```GDScript
-var neural_network : RLNNET = RLNNET.new([2,5,1], 0.00006, true)
-
-func _physics_process(_delta : float) -> void:
-	  neural_network.set_input(InputData)
-	  var output = neural_network.get_output()
-	  
-	  execute(output)
-	  
-	  if game_has_finished:
-	  	  neural_network.set_reward(reward)
-	  	  neural_network.update()
-	  	  restart_game()
+neural_network.run()
 ```
+To get results, you can use the get_output function, but if you just want to print them, you can use the print_output method.
+```GDScript
+neural_network.print_output()
+```
+Usually the output you get the first time is not what you want, so you may want to train your neural network.
+Before you start training, think about what you want to get. You can set your desired output with the set_desired_output method.
+```GDScript
+neural_network.set_desired_output([0.512])
+```
+Now you can start the training itself using train function.
+```GDScript
+neural_network.train()
+neural_network.run()
+```
+Let's look at the result again.
+```GDScript
+neural_network.print_output()
+```
+The results are very likely closer to what you want, but still not good enough. So let's invoke the train function again, but this time with one extra parameter, which determines how many iterations the neural network will be training.
+```GDScript
+neural_network.train(250)
+neural_network.run()
+```
+Now the result should be perfect or close to it. If it isn't, then repeat training process.
+```GDScript
+neural_network.print_output()
+```
+The output will be something like this:
+`[0.48292014681138]`
+`[0.49121472848005]`
+`[0.512]`
+After this little test, you may want to use a bit more of the functionality the NNET class provides, like activation functions, saving and loading neural networks, etc.
+
+All other NNET functions, that you may want to use:
+- set_function (see <font style="color:red">enum ActivationFunction</font>)
+- set_custom_function (see <font style="color:red">set_custom_function</font>)
+- duplicate (see <font style="color:red">duplicate</font>)
+- assign (see <font style="color:red">assign</font>)
+- save_data (see <font style="color:red">save_data</font>)
+- load_data (see <font style="color:red">load_data</font>)
+- copy_from_file (see <font style="color:red">copy_from_file</font>)
+- print_info (see <font style="color:red">print_info</font>)
+
+
+	 
