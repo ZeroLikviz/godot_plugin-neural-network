@@ -8,7 +8,7 @@ documentation is in progress...
 
 # NeuralNet Toolkit
 <p align="center">
-<img src="https://i.postimg.cc/435gWN5P/250-20240218003345.png" alt="NNET logotype">
+<img src="https://i.postimg.cc/9FWkc5GR/250-20240218012009.png" alt="NNET logotype">
 </p>
 
 -------
