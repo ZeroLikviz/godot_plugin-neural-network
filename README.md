@@ -1,7 +1,7 @@
 DOCUMENTATION IS USELESS. I will create new documentation about 18-19-th of February.
 - 
 TODO:
-- add user friendly functions to GPUNNET class
+- ~~add user friendly functions to GPUNNET class~~
 - create new documentation and learn how to create good documentations
 
 
