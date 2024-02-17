@@ -13,12 +13,15 @@ func rl_test() -> void:
 
 func basic_test() -> void:
 	var NN = NNET.new([1,1], 0.5, true)
+	NN.set_function(NNET.ActivationFunction.ReLU)
 	NN.set_desired_output([0.5])
 	NN.set_input([0.1])
 	NN.run()
-	NN.print_output()
+	#NN.print_output()
 	NN.train(500)
-	NN.print_output()
+	var h = NN.get_output()[0]
+	if not is_equal_approx(h, 0.5):
+		print_rich("[color=red]ERROR[/color] " + str(h))
 
 func _ready() -> void:
 	print("Here, the neural network tries to make the output equal to 0.5. The training method used is back propagation.")
@@ -26,12 +29,13 @@ func _ready() -> void:
 	print("Here, the neural network tries to make the output equal to 0.0. The training method used is reinforcement learning.")
 	rl_test()
 	print()
-	
+	#perfomance_test()
 	#components_test()
 
 func components_test() -> void:
 	print("testing save/load systems: ")
 	var NN = NNET.new([1,1])
+	NN.set_function(NNET.ActivationFunction.linear)
 	NN.set_input([1.0])
 	NN.run()
 	var output : float = NN.get_output()[0]
@@ -58,3 +62,39 @@ func components_test() -> void:
 	if NN_container.get_output()[0] == output:
 		print_rich("    [color=green]test was passed[/color]")
 	else: print_rich("    [color=red]test was failed[/color] : [color=yellow]" + str(output) + " != " + str(NN_container.get_output()[0]) + "[/color]")
+
+func perfomance_test() -> void:
+	var cpu_nn_small : NNET    =    NNET.new([5,5])
+	var gpu_nn_small : GPUNNET = GPUNNET.new([5,5])
+	
+	print("Structure: [5, 5]. CPU NN run function time: ", time_us(func()->void:cpu_nn_small.run()), " us")
+	print("Structure: [5, 5]. GPU NN run function time: ", time_us(func()->void:gpu_nn_small.run()), " us")
+	
+	var cpu_nn : NNET    =    NNET.new([5,128,128,5])
+	var gpu_nn : GPUNNET = GPUNNET.new([5,128,128,5])
+	
+	print("Structure: [5, 128, 128, 5]. CPU NN run function time: ", time_us(func()->void:cpu_nn.run()), " us")
+	print("Structure: [5, 128, 128, 5]. GPU NN run function time: ", time_us(func()->void:gpu_nn.run()), " us")
+	
+	var cpu_nn_large : NNET    =    NNET.new([5,512,512,128,5])
+	var gpu_nn_large : GPUNNET = GPUNNET.new([5,512,512,128,5])
+	
+	print("Structure: [5, 512, 512, 128, 5]. CPU NN run function time: ", time_us(func()->void:cpu_nn_large.run()), " us")
+	print("Structure: [5, 512, 512, 128, 5]. GPU NN run function time: ", time_us(func()->void:gpu_nn_large.run()), " us")
+	
+	var cpu_nn_huge : NNET    =    NNET.new([5,1024,1024,1024,5])
+	var gpu_nn_huge : GPUNNET = GPUNNET.new([5,1024,1024,1024,5])
+	
+	print("Structure: [5, 1024, 1024, 1024, 5]. CPU NN run function time: ", time_us(func()->void:cpu_nn_huge.run()), " us")
+	print("Structure: [5, 1024, 1024, 1024, 5]. GPU NN run function time: ", time_us(func()->void:gpu_nn_huge.run()), " us")
+	
+	gpu_nn_large.free_objects()
+	gpu_nn_small.free_objects()
+	gpu_nn_huge.free_objects()
+	gpu_nn.free_objects()
+
+func time_us(function : Callable) -> int:
+	var time_start = Time.get_ticks_usec()
+	function.call()
+	var time_end   = Time.get_ticks_usec()
+	return time_end - time_start
