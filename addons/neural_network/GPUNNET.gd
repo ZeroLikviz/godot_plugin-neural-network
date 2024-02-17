@@ -23,9 +23,10 @@ var last_layer : int
 var layers_size : int
 var is_bias_used : bool
 var neurons_max : int
+var true_fd : bool
 var x_workgroups : int
 
-func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true) -> void:
+func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value = false) -> void:
 	for layer in layers_construction:
 		assert(layer >= 1, "GPUNNET _init LINE 30: Amount of neurons in layer can't be less than 0")
 	
@@ -33,6 +34,7 @@ func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float =
 	shader = device.shader_create_from_spirv(load("res://addons/neural_network/GPUNNET.glsl").get_spirv())
 	pipeline = device.compute_pipeline_create(shader)
 	
+	true_fd = true_fd_value
 	is_bias_used = use_bias
 	learning_rate = learning_rate_value
 	last_layer=layers_construction.size()-1
@@ -48,7 +50,7 @@ func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float =
 	random_weights.resize(layers_size * neurons_max * neurons_max)
 	i = 0; while i < random_weights.size(): random_weights[i] = randf_range(-1.0, 1.0); i += 1
 	
-	common_data            = device.storage_buffer_create(28)
+	common_data            = device.storage_buffer_create(32)
 	bias_storage           = device.storage_buffer_create(last_layer * neurons_max * 4)
 	deltas_storage         = device.storage_buffer_create(last_layer * neurons_max * 4)
 	weights_storage        = device.storage_buffer_create(layers_size * neurons_max * neurons_max * 4, random_weights.to_byte_array())
@@ -71,8 +73,6 @@ func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float =
 	uniform_set = device.uniform_set_create(uniforms, shader, 0)
 	
 	x_workgroups = int(floor(float(neurons_max) / 64.0)) + 1
-	
-	submit()
 
 func create_uniform(rid : RID, binding : int) -> RDUniform:
 	var uniform = RDUniform.new()
@@ -103,7 +103,7 @@ func set_layer(layer : int) -> void:
 
 func fill_data() -> void:
 	var data : PackedByteArray = PackedByteArray([])
-	data.resize(28)
+	data.resize(32)
 	data.encode_float(  0, learning_rate)
 	data.encode_u32(    4, last_layer   )
 	data.encode_u32(    8, layers_size  )
@@ -111,7 +111,8 @@ func fill_data() -> void:
 	data.encode_u32(   16, 1            )
 	data.encode_float( 20, float(is_bias_used))
 	data.encode_u32(   24, RUN          )
-	device.buffer_update(common_data, 0, 28, data)
+	data.encode_u32(   28, float(true_fd))
+	device.buffer_update(common_data, 0, 32, data)
 
 func run() -> void:
 	set_mode(RUN)
