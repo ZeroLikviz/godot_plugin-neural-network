@@ -16,6 +16,7 @@ layout(set = 0, binding = 0, std430) restrict readonly buffer CommonData {
 	uint layer;
 	float bias;
 	uint mode;
+	float true_fd;
 } data;
 
 layout(set = 0, binding = 1, std430) restrict buffer BiasData {
@@ -49,7 +50,7 @@ float f(float x)
 
 float fd(float x)
 {
-	return f(x) * (1.0 - f(x));
+	return f(x) * (1.0 - f(x)) * (1.0 - data.true_fd) + data.true_fd;
 }
 
 uint d2(uint x, uint y)
