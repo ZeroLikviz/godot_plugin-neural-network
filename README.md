@@ -150,7 +150,9 @@ Structure: [5, 1024, 1024, 1024, 5]. CPU NN run function time: 4534535 us
 Structure: [5, 1024, 1024, 1024, 5]. GPU NN run function time: 30807 us
 ```
  
-If you want to test your own device, then you could use function "performance_test" from script "example.gd".
+If you want to test your own device, then you could use the function "performance_test" from the script "example.gd".
+
+
 ------
 
 TODO:
