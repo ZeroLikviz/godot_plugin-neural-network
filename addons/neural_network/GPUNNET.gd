@@ -178,14 +178,3 @@ func free_objects() -> void:
 
 func free() -> void:
 	free_objects()
-
-func get_neurons() -> Array:
-	var neurons : PackedFloat32Array = device.buffer_get_data(neurons_storage, 0, layers[0] * 4).to_float32_array()
-	var i : int = 1
-	while i < layers_size:
-		neurons += device.buffer_get_data(neurons_storage, i * neurons_max * 4, layers[i] * 4).to_float32_array()
-		i += 1
-	return neurons
-
-func print_neurons() -> void:
-	print(get_neurons())
