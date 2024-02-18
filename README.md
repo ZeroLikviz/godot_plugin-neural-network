@@ -155,9 +155,142 @@ If you want to test your own device, then you could use the function "performanc
 
 ------
 
+
+#####  NNET methods
+Description:
+- \_init
+	parameters:
+	- structure : layer[int] = [1,1]
+	- learning_rate : float = 1.0
+	- use_biases : bool = true
+	- true_fd : bool = false
+	That is an function for initialazing
+- set_function -> void
+	parameters:
+	- function : NNET.ActivationFunction
+	Use it to choose one of the activation functions (see <font style="color:red">enum ActivationFunction</font>). By default activation function is a sigmoid (logistic) function.
+- set_custom_function -> void
+	parameters:
+	- function : Callable
+	Use it to set custom activation function. Warning: Custom activation functions can't be saved in a file, so when you are getting your neural network back from the file, you must set the activation function to custom manually.
+- set_desired_output -> void
+	parameters:
+	- desired_output : Array\[float]
+	Use it to set desired output. It will throw an error if the size of your desired output doesn't match the size of the output.
+- set_input -> void
+	parameters:
+	- input : Array\[float]
+	Use it to set input. It will throw an error if the size of the input provided by you doesn't match the size of the actual input.
+- run -> void
+	No parameters.
+	Use it to execute neural network.
+- train -> void
+	parameters:
+	- iterations
+	Use it to train neural network. Parameter "iterations" represents how many times the neural network will be training.
+- get_output -> Array
+	parameters:
+	- transform : bool = false
+	Use it to get output. Provide true if you want your output to range from -1 to 1 instead of 0 to 1 (this only works when the activation function is a sigmoid (logistic) function ).
+- print_output -> void
+	parameters:
+	- transform : bool = false
+	Use it to print output. It's literally `print(get_output(transform))` inside.
+- duplicate -> NNET
+	No parameters.
+	Use it to get a duplicate of the neural network.
+- assign -> void
+	parameters:
+	- neural_network
+	Use it to assign one neural network to another. The data of provided neural network is being copied, so they don't have any shared memory between them.
+- save_data -> void
+	parameters:
+	- file_name : String
+	Use to save your neural network. If file_name starts with "res://" or "user://" then it's treated as a full path, otherwise it's treated as a file name and path for file calculated as "res://addons/neural_network/data/" + file_name. Custom functions can't be saved into a file.
+- load_data -> int
+	parameters:
+	- file_name : String
+	Use it to load data from a file to your neural network, but be careful. If the neural network's structure inside the file doesn't match the structure of your neural network, then the function will print an error and return ERR_INVALID_DATA, and no changes will be applied to your neural network. If their structures match, then the data will be successfully loaded into your neural network, and the function will return OK.
+	The path is calculated exactly the same way as in the save_data function.
+	Custom functions can't be loaded into a neural network.
+- copy_from_file -> void
+	Use it to copy neural network from file entirely. The path is calculated exactly the same way as in the save_data function. Custom functions can't be loaded into a neural network.
+	Warning: be careful, using this function you can change the construction of your neural network.
+- print_info -> void
+	parameters:
+	- neural_network_name : String
+	- spaces : int = 0
+	- print_weights : bool = false
+	Use it to print information about your neural network. Neural_network_name is what it is; "spaces" is a parameter that says how many spaces should be before every printed line of information. "print_weights" is a parameter that indicates whether weights should be printed or not. Example:
+```GDScript
+var neural_network : NNET = NNET.new([1,2,3,4,8,2,1], 0.81, false)
+neural_network.set_function( NNET.ActivationFunction.linear )
+neural_network.print_info()
+```
+Output:
+```
+SomeName :
+    structure:           [1, 2, 3, 4, 8, 2, 1]
+    bias using:          false
+    learning rate:       0.81
+    true f'():           false
+    activation function: linear
+```
+ 
+
+##### RLNNET methods
+Description:
+- \_init
+	parameters:
+	- structure : layer[int] = [1,1]
+	- curiousity_rate : float = 0.25
+	- use_biases : bool = true
+	- true_fd : bool = false
+	That is an function for initialazing
+- set_input -> void same description as in the NNET class
+- run -> void same description as in the NNET class
+- get_output -> Array
+	Similar to the NNET.get_output function with the difference that if the run function hasn't been called, then it will invoked the run function for you.
+- set_function -> void same description as in the NNET class
+- set_custom_function -> void same description as in the NNET class
+- print_output -> void same description as in the NNET class
+- set_reward -> void
+	parameters:
+	reward : float
+	Use this function to set the reward. This function should always be called before calling the update function.
+- update -> void
+	No parameters.
+	Use this function to indicate that game ended, agent died, and etc. You should always call the set_reward function before calling this one.
+- get_main -> void:
+	No parameters.
+	Use this function to get neural network that is responsible for the most best agent's approach.
+- get_main_output -> void:
+	No parameters.
+	Use this function to get output from the best agent's approach. You mustn't use the run function before calling this one, since it is just a waste of power ( the run function may use new approach instead of the best one )
+
+
+##### GPUNNET methods
+Description:
+- \_init same description as in the NNET class
+- set_input -> void same description as in the NNET class
+- set_desired_output -> void same description as in the NNET class
+- run -> void same description as in the NNET class
+- get_output -> Array
+	No parameters.
+	same description as in the NNET class, except for the transform parameter.
+- print_output -> void
+	No parameters.
+	same description as in the NNET class, except for the transform parameter.
+- free_objects
+	No parameters.
+	Use this function to free the GPUNNET variable. This function should always be called after you finish working with the neural network.
+
+
+--------
+
+
 TODO:
 - add save/load data functions to the GPUNNET class
-- finish the documentation
 
 
 
