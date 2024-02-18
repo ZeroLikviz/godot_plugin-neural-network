@@ -346,27 +346,27 @@ func load_data(file_name : String) -> int:
 	
 	var info : int = file.get_8()
 	if file.get_8() != int(is_using_bias):
-		printerr("NNET.gd printerr LINE 348: neural network structure doesn't fit")
+		printerr("NNET.gd printerr LINE 349: neural network structure doesn't fit")
 		assign(buffer)
-		return -1
+		return ERR_INVALID_DATA
 	true_fd = file.get_8(); set_function(info)
 	if layers_size != file.get_64():
-		printerr("NNET.gd printerr LINE 353: neural network structure doesn't fit")
+		printerr("NNET.gd printerr LINE 354: neural network structure doesn't fit")
 		assign(buffer)
-		return -1
+		return ERR_INVALID_DATA
 	for layer in layers:
 		if layer != file.get_64():
-			printerr("NNET.gd printerr LINE 358: neural network structure doesn't fit")
+			printerr("NNET.gd printerr LINE 359: neural network structure doesn't fit")
 			assign(buffer)
-			return -1
+			return ERR_INVALID_DATA
 	var i : int = 0
 	while i < weights.size():
 		var boolean : bool = not file.eof_reached()
 		if not boolean:
 			corrupted = true
-			printerr("NNET.gd printerr LINE 366: neural network structure doesn't fit")
+			printerr("NNET.gd printerr LINE 367: neural network structure doesn't fit")
 			assign(buffer)
-			return -1
+			return ERR_INVALID_DATA
 		weights[i] = file.get_double()
 		i += 1
 	i = 0
@@ -376,7 +376,7 @@ func load_data(file_name : String) -> int:
 			var boolean : bool = not file.eof_reached()
 			if not boolean:
 				corrupted = true
-				printerr("NNET.gd printerr LINE 378: neural network structure doesn't fit")
+				printerr("NNET.gd printerr LINE 379: neural network structure doesn't fit")
 				assign(buffer)
 				return -1
 			biases[i][j] = file.get_double()
@@ -386,11 +386,11 @@ func load_data(file_name : String) -> int:
 	file.get_double()
 	if corrupted or not file.eof_reached():
 		assign(buffer)
-		printerr("NNET.gd printerr LINE 388: neural network structure doesn't fit")
+		printerr("NNET.gd printerr LINE 389: neural network structure doesn't fit")
 		return -1
 	file.close()
 	fill_table_of_weights()
-	return 0
+	return OK
 
 func copy_from_file(file_name : String) -> void:
 	var file = FileAccess.open("res://addons/neural_network/data/" + file_name, FileAccess.READ)
@@ -413,7 +413,7 @@ func copy_from_file(file_name : String) -> void:
 	set_function(function_info_file)
 	fill_table_of_weights()
 
-func print_info(NeuralNetworkName : String, offset : int = 0) -> void:
+func print_info(NeuralNetworkName : String, offset : int = 0, print_weights : bool = false) -> void:
 	var offset_string : String = ""
 	var iterator : int = 0
 	while iterator < offset:
@@ -424,7 +424,7 @@ func print_info(NeuralNetworkName : String, offset : int = 0) -> void:
 	print(offset_string + "    bias using:          " + str(is_using_bias))
 	print(offset_string + "    learning rate:       " + str(learning_rate))
 	print(offset_string + "    true f'():           " + str(true_fd))
-	print(offset_string + "    weights:             " + str(weights))
+	if print_weights: print(offset_string + "    weights:             " + str(weights))
 	var function : String = "custom"
 	match activation_function_info:
 		ActivationFunction.linear  : function = "linear"
