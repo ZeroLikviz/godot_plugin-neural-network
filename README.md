@@ -352,4 +352,4 @@ TODO:
 - make more optimizations
 
 
- If you find any mistakes or misunderstandings in this documentation, please report them through GitHub issues.
+ If you find any errors or misunderstandings in this documentation or want to suggest any improvements for this plugin, please report them via GitHub issues
