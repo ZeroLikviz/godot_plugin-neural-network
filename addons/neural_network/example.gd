@@ -1,4 +1,3 @@
-@tool
 extends Node
 
 func rl_test() -> void:
@@ -17,11 +16,13 @@ func basic_test() -> void:
 	NN.set_desired_output([0.5])
 	NN.set_input([0.1])
 	NN.run()
-	#NN.print_output()
+	NN.print_output()
 	NN.train(500)
 	var h = NN.get_output()[0]
 	if not is_equal_approx(h, 0.5):
 		print_rich("[color=red]ERROR[/color] " + str(h))
+		return
+	NN.print_output()
 
 func _ready() -> void:
 	print("Here, the neural network tries to make the output equal to 0.5. The training method used is back propagation.")
