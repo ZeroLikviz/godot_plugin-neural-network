@@ -26,24 +26,24 @@ var neural_network : NNET = NNET.new([1,5,1], 1.0, true)
 The neural network's structure looks like the image below if you define its structure as same as mine. (biases are not shown in the image)
 ![](https://i.postimg.cc/yN0pWDJP/249-20240217224512.png)
  
-Neural networks need input data, so provide some. You can do it using the ![set_input](#^nnetsetinput) method
+Neural networks need input data, so provide some. You can do it using the set_input method
 ```GDScript
 neural_network.set_input([0.2])
 ```
-Now let's [run](#^nnetrun) it and see what result we get
+Now let's run it and see what result we get
 ```GDScript
 neural_network.run()
 ```
-To get results, you can use the [get_output](#^nnetgetoutput) function, but if you just want to print them, you can use the [print_output](#^nnetprintoutput) method.
+To get results, you can use the get_output function, but if you just want to print them, you can use the print_output method.
 ```GDScript
 neural_network.print_output()
 ```
 Usually the output you get the first time is not what you want, so you may want to train your neural network.
-Before you start training, think about what you want to get. You can set your desired output with the [set_desired_output](#nnetsetdesiredoutput) method.
+Before you start training, think about what you want to get. You can set your desired output with the set_desired_output method.
 ```GDScript
 neural_network.set_desired_output([0.512])
 ```
-Now you can start the training itself using [train](#^nnettrain) function.
+Now you can start the training itself using train function.
 ```GDScript
 neural_network.train()
 neural_network.run()
@@ -52,7 +52,7 @@ Let's look at the result again.
 ```GDScript
 neural_network.print_output()
 ```
-The results are very likely closer to what you want, but still not good enough. So let's invoke the [train](#^nnettrain) function again, but this time with one extra parameter, which determines how many iterations the neural network will be training.
+The results are very likely closer to what you want, but still not good enough. So let's invoke the train function again, but this time with one extra parameter, which determines how many iterations the neural network will be training.
 ```GDScript
 neural_network.train(250)
 neural_network.run()
@@ -68,35 +68,35 @@ The output will be something like this:
 [0.49121472848005]
 [0.512]
 ```
-After this little test, you may want to use a bit more of the functionality the NNET class provides, like activation functions, [saving](#^nnetsavedata) and [loading](#^nnetloaddata) neural networks, etc.
+After this little test, you may want to use a bit more of the functionality the NNET class provides, like activation functions, saving and loading neural networks, etc.
 
 All the other NNET functions, that you may want to use:
-- [set_function](#^nnetsetfunction) (see <font style="color:red">[enum ActivationFunction](#^nnetenum)</font>)
-- [set_custom_function](#^nnetsetcustomfunction)
-- [duplicate](#^nnetduplicate)
-- [assign](#^nnetassign)
-- [save_data](#nnetsavedata)
-- [load_data](#^nnetloaddata)
-- [copy_from_file](#^nnetcopyfromfile)
-- [print_info](#^nnetprintinfo)
+- set_function
+- set_custom_function
+- duplicate
+- assign
+- save_data
+- load_data
+- copy_from_file
+- print_info
 
 
 ### RLNNET
 ( I'm not even sure if this is reinforcement training. All these lectures/lessons/videos have confused me too much, and I would be glad if you could tell if this is RL or not )
  
-[Initialization](#^rlnnetinit) process is the same, but instead of learning rate you provide "curiosity rate" (or mutation rate).
+Initialization process is the same, but instead of learning rate you provide "curiosity rate" (or mutation rate).
 
 Before training the agent you need to:
 - initialize the enviroment
 - initialize the agent
 
 To train agent follow the instructions:
-- provide input data to agent (see [set_input](#^rlnnetsetinput))
-- get the actions the agent wants to take and then execute them (see [get_output](#^rlnnetgetoutput))
+- provide input data to agent
+- get the actions the agent wants to take and then execute them
 - check if the environment says to stop (game ended or agent died and etc.)
 - in case if environment did say to stop:
-	- provide reward to agent. (see [set_reward](#^rlnnetsetreward))
-	- update the agent. (see [update](#^rlnnetupdate))
+	- provide reward to agent.
+	- update the agent.
 	- reset the enviroment.
 - start this loop from the beginning and repeat until you are satisfied with the result
 Notice that you should always provide the reward to the agent before calling the update function.
@@ -121,18 +121,18 @@ func main_loop() -> void:
 		agent.update()
 		reset_enviroment()
 ```
-Notice that it is not necessary to call the [run](#^rlnnetrun) function before invoking the [get_output](#^rlnnetgetoutput) method. The reason is that the RLNNET class works a bit differently, and in case you didn't run the neural network before getting the output, the class will do it for you.
+Notice that it is not necessary to call the run function before invoking the get_output method. The reason is that the RLNNET class works a bit differently, and in case you didn't run the neural network before getting the output, the class will do it for you.
  
-After you are done training, you may want to save your agent's brains, and you can accomplish this by getting a neural network that is responsible for the agent's actions (see [get_main](#^rlnnetgetmain)) and then invoking the save_data method (see [save_data](#^nnetsavedata))
+After you are done training, you may want to save your agent's brains, and you can accomplish this by getting a neural network that is responsible for the agent's actions and then invoking the save_data method
 
-When you are changing the initial environment, for example, changing from level 0 to 1, or moving a wall (doing any actions that the agent is not responsible for), you should call the [reset](#^rlnnetreset) function. Don't be afraid of its name; it doesn't mean the neural network of the agent will be cleared or something; by calling this function, you are only telling the agent that the initial environment has been changed.
+When you are changing the initial environment, for example, changing from level 0 to 1, or moving a wall (doing any actions that the agent is not responsible for), you should call the reset function. Don't be afraid of its name; it doesn't mean the neural network of the agent will be cleared or something; by calling this function, you are only telling the agent that the initial environment has been changed.
 
 All the other RLNNET functions you may want to use:
-- [get_main_output](#^rlnnetgetmainoutput)
+- get_main_output
 
 ### GPUNNET
 This class is very similar to NNET, but there are some limitations and disadvantages:
-- after you are done with the variable of type GPUNNET, you must call the [free_objects](#^gpunnetfreeobjects) function.
+- after you are done with the variable of type GPUNNET, you must call the free_objects function.
 - there are no save/load data functions for the GPUNNET class. (I will add them by the 24-25th of February)
 - the allocated memory for the neurons is a rectangular 2D array, that means if you create a neural network with the structure like this \[1,10,50,5,1\], then 2D array with the size of 5 times 50 will be allocated for the neurons. That is 193 inactive neurons, so structure like \[1,50,50,50,1\] would be better for the memory usage.
 
@@ -156,7 +156,7 @@ If you want to test your own device, then you could use the function performance
 ------
 
 
-##### NNET enum ActivationFunction ^nnetenum
+##### NNET enum ActivationFunction
 - linear
 - sigmoid
 - logistic = sigmoid
@@ -165,7 +165,7 @@ If you want to test your own device, then you could use the function performance
 
 #####  NNET methods
 Description:
-- \_init ^nnetinit
+- \_init
 	
 	parameters:
 	- structure : layer[int] = [1,1]
@@ -174,86 +174,86 @@ Description:
 	- true_fd : bool = false
 	
 	That is an function for initializing
-- set_function -> void ^nnetsetfunction
+- set_function -> void
 	
 	parameters:
-	- function : [NNET.ActivationFunction](#^nnetenum)
+	- function : NNET.ActivationFunction
 	
-	Use it to choose one of the activation functions (see <font style="color:red">[enum ActivationFunction](#^nnetenum)</font>). By default activation function is a sigmoid (logistic) function.
-- set_custom_function -> void ^nnetsetcustomfunction
+	Use it to choose one of the activation functions. By default activation function is a sigmoid (logistic) function.
+- set_custom_function -> void
 	
 	parameters:
 	- function : Callable
 	
 	Use it to set custom activation function. Warning: Custom activation functions can't be saved in a file, so when you are getting your neural network back from the file, you must set the activation function to custom manually.
-- set_desired_output -> void ^nnetsetdesiredoutput
+- set_desired_output -> void
 	
 	parameters:
 	- desired_output : Array\[float]
 	
 	Use it to set desired output. It will throw an error if the size of your desired output doesn't match the size of the output.
-- set_input -> void ^nnetsetinput
+- set_input -> void
 	
 	parameters:
 	- input : Array\[float]
 	
 	Use it to set input. It will throw an error if the size of the input provided by you doesn't match the size of the actual input.
-- run -> void ^nnetrun
+- run -> void
 	
 	No parameters.
 	
 	Use it to execute neural network.
-- train -> void ^nnettrain
+- train -> void
 	
 	parameters:
 	- iterations
 	
 	Use it to train neural network. Parameter "iterations" represents how many times the neural network will be training.
-- get_output -> Array ^nnetgetoutput
+- get_output -> Array
 	
 	parameters:
 	- transform : bool = false
 	
 	Use it to get output. Provide true if you want your output to range from -1 to 1 instead of 0 to 1 (this only works when the activation function is a sigmoid (logistic) function ).
-- print_output -> void ^nnetprintoutput
+- print_output -> void
 	
 	parameters:
 	- transform : bool = false
 	
 	Use it to print output. It's literally `print(get_output(transform))` inside.
-- duplicate -> NNET ^nnetduplicate
+- duplicate -> NNET
 	
 	No parameters.
 	
 	Use it to get a duplicate of the neural network.
-- assign -> void ^nnetassign
+- assign -> void
 	
 	parameters:
 	- neural_network
 	
 	Use it to assign one neural network to another. The data of provided neural network is being copied, so they don't have any shared memory between them.
-- save_data -> void ^nnetsavedata
+- save_data -> void
 	
 	parameters:
 	- file_name : String
 	
 	Use to save your neural network. If file_name starts with "res://" or "user://" then it's treated as a full path, otherwise it's treated as a file name and path for file calculated as "res://addons/neural_network/data/" + file_name. Custom functions can't be saved into a file.
-- load_data -> int ^nnetloaddata
+- load_data -> int
 	
 	parameters:
 	- file_name : String
 	
 	Use it to load data from a file to your neural network, but be careful. If the neural network's structure inside the file doesn't match the structure of your neural network, then the function will print an error and return ERR_INVALID_DATA, and no changes will be applied to your neural network. If their structures match, then the data will be successfully loaded into your neural network, and the function will return OK.
-	The path is calculated exactly the same way as in the [save_data](#^nnetsavedata) function.
+	The path is calculated exactly the same way as in the save_data function.
 	Custom functions can't be loaded into a neural network.
-- copy_from_file -> void ^nnetcopyfromfile
+- copy_from_file -> void
 	
 	parameters:
 	- file_name : String
 	
-	Use it to copy neural network from file entirely. The path is calculated exactly the same way as in the [save_data](#^nnetsavedata) function. Custom functions can't be loaded into a neural network.
+	Use it to copy neural network from file entirely. The path is calculated exactly the same way as in the save_data function. Custom functions can't be loaded into a neural network.
 	Warning: be careful, using this function you can change the construction of your neural network.
-- print_info -> void ^nnetprintinfo
+- print_info -> void
 	
 	parameters:
 	- neural_network_name : String
@@ -279,7 +279,7 @@ SomeName :
 
 ##### RLNNET methods
 Description:
-- \_init ^rlnnetinit
+- \_init
 	
 	parameters:
 	- structure : layer[int] = [1,1]
@@ -287,55 +287,55 @@ Description:
 	- use_biases : bool = true
 	- true_fd : bool = false
 	
-	That is an function for initialazing
-- set_input -> void [same description as in the NNET class](#^nnetsetinput) ^rlnnetsetinput
-- run -> void [same description as in the NNET class](#^nnetrun) ^rlnnetrun
-- get_output -> Array ^rlnnetgetoutput
+	That is a function for initializing
+- set_input -> void same description as in the NNET class
+- run -> void same description as in the NNET class
+- get_output -> Array
 	
-	Similar to the [NNET.get_output](#^nnetgetoutput) function with the difference that if the [run](#^rlnnetrun) function hasn't been called, then it will invoke the run function for you.
-- set_function -> void [same description as in the NNET class](#^nnetsetfunction) ^rlnnetsetfunction
-- set_custom_function -> void [same description as in the NNET class](#^nnetsetcustomfunction) ^rlnnetsetcustomfunction
-- print_output -> void [same description as in the NNET class](#^nnetprintoutput) ^rlnnetprintoutput
-- set_reward -> void ^rlnnetsetreward
+	Similar to the NNET.get_output function with the difference that if the run function hasn't been called, then it will invoke the run function for you.
+- set_function -> void same description as in the NNET class
+- set_custom_function -> void same description as in the NNET class
+- print_output -> void same description as in the NNET class
+- set_reward -> void
 	
 	parameters:
 	- reward : float
 	
-	Use this function to set the reward. This function should always be called before calling the [update](#^rlnnetupdate) function.
-- update -> void ^rlnnetupdate
+	Use this function to set the reward. This function should always be called before calling the update function.
+- update -> void
 	
 	No parameters.
 	
-	Use this function to indicate that game ended, agent died, and etc. You should always call the [set_reward](#^rlnnetsetreward) function before calling this one.
-- get_main -> void: ^rlnnetgetmain
+	Use this function to indicate that game ended, agent died, and etc. You should always call the set_reward function before calling this one.
+- get_main -> void
 	
 	No parameters.
 	
 	Use this function to get neural network that is responsible for the most best agent's approach.
-- get_main_output -> void: ^rlnnetgetmainoutput
+- get_main_output -> void
 	
 	No parameters.
 	
-	Use this function to get output from the best agent's approach. You mustn't use the [run](#^rlnnetrun) function before calling this one, since it is just a waste of power ( the [run](#^rlnnetrun) function may use new approaches instead of the best one )
+	Use this function to get output from the best agent's approach. You mustn't use the run function before calling this one, since it is just a waste of power ( the run function may use new approaches instead of the best one )
 
 
 ##### GPUNNET methods
 Description:
-- \_init [same description as in the NNET class](#^nnetinit) ^gpunnetinit
-- set_input -> [void same description as in the NNET class](#^nnetsetinput) ^gpunnetsetinput
-- set_desired_output -> [void same description as in the NNET class](#^nnetsetdesiredoutput) ^gpunnetsetdesiredoutput
-- run -> [void same description as in the NNET class](#^nnetrun) ^gpunnetrun
-- get_output -> Array ^gpunnetgetoutput
+- \_init same description as in the NNET class
+- set_input -> void same description as in the NNET class
+- set_desired_output -> void same description as in the NNET class
+- run -> void same description as in the NNET class
+- get_output -> Array
 	
 	No parameters.
 	
 	same description as in the NNET class, except for the transform parameter.
-- print_output -> void ^gpunnetprintoutput
+- print_output -> void
 	
 	No parameters.
 	
 	same description as in the NNET class, except for the transform parameter.
-- free_objects ^gpunnetfreeobjects
+- free_objects
 	
 	No parameters.
 	
