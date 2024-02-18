@@ -108,7 +108,7 @@ func _ready() -> void:
 	# initialazing the environment...
 	agent = RLNNET.new(structure, curiosity_rate, use_bias)
 
-func execute_agent_actions() -> void:
+func execute_agent_actions(agent_output : Array) -> void:
 	# executing agent actions...
 	pass
 
