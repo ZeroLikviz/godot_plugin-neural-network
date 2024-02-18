@@ -9,7 +9,7 @@ var has_updated : bool = false
 var has_runned : bool = false
 var curiosity_rate : float = 0.1
 
-func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.008, use_bias: bool = true, afd_a : bool = false) -> void:
+func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.25, use_bias: bool = true, afd_a : bool = false) -> void:
 	main.assign(NNET.new(layers_construction, 0.1, use_bias, afd_a))
 	buffer.assign(main.duplicate())
 	curiosity_rate = curiosity_rate_a
@@ -45,6 +45,14 @@ func get_output(transform : bool = false) -> Array:
 	if has_updated:
 		return buffer.get_output(transform)
 	return main.get_output(transform)
+
+func set_function(function : NNET.ActivationFunction) -> void:
+	main.set_function(function)
+	buffer.set_function(function)
+
+func set_custom_function(function : Callable) -> void:
+	main.set_custom_function(function)
+	buffer.set_custom_function(function)
 
 func get_main_output(transform : bool = false) -> Array:
 	main.run()
