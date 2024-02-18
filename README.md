@@ -17,6 +17,7 @@ Initialization of \*NNET classes requires some parameters:
 - learning rate
 - true or false depending on whether you are going to use biases or not
 - <font style="color:grey">( Optionally )</font> true or false depending on whether you are going to use f'() or not  (see <font style="color:red">true_fd</font>)
+ 
 And now we have something similar to it:
 ```GDScript
 var neural_network : NNET = NNET.new([1,5,1], 1.0, true)
@@ -149,7 +150,11 @@ Structure: [5, 1024, 1024, 1024, 5]. CPU NN run function time: 4534535 us
 Structure: [5, 1024, 1024, 1024, 5]. GPU NN run function time: 30807 us
 ```
 
+------
 
+TODO:
+- add save/load data functions to the GPUNNET class
+- finish the documentation
 
 
 
