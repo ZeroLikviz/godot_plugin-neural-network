@@ -340,7 +340,7 @@ Description:
 	
 	No parameters.
 	
-	Use this function to free the GPUNNET variable. This function should always be called after you finish working with the neural network.
+	Use this function to free up the memory allocated for an object of type GPUNNET. This function should always be called after you finish working with the neural network.
 
 
 --------
