@@ -132,7 +132,7 @@ All the other RLNNET functions you may want to use:
 
 ### GPUNNET
 This class is very similar to NNET, but there are some limitations and disadvantages:
-- after you are done with the variable of type GPUNNET, you must call the free_objects function.
+- after you are done working with the variable of type GPUNNET, you must call the free_objects function.
 - there are no save/load data functions for the GPUNNET class. (I will add them by the 24-25th of February)
 - the allocated memory for the neurons is a rectangular 2D array, that means if you create a neural network with the structure like this \[1,10,50,5,1\], then 2D array with the size of 5 times 50 will be allocated for the neurons. That is 193 inactive neurons, so structure like \[1,50,50,50,1\] would be better for the memory usage.
 
@@ -173,19 +173,21 @@ Description:
 	- use_biases : bool = true
 	- true_fd : bool = false
 	
-	That is an function for initializing
+	That is a function for initializing
 - set_function -> void
 	
 	parameters:
 	- function : NNET.ActivationFunction
 	
-	Use it to choose one of the activation functions. By default activation function is a sigmoid (logistic) function.
+	Use it to choose one of the activation functions from ActivationFunction enum. By default activation function is a sigmoid (logistic) function.
 - set_custom_function -> void
 	
 	parameters:
 	- function : Callable
 	
-	Use it to set custom activation function. Warning: Custom activation functions can't be saved in a file, so when you are getting your neural network back from the file, you must set the activation function to custom manually.
+	Use it to set custom activation function.
+> [!WARNING]
+> Custom activation functions can't be saved into a file, so when you are getting your neural network back from the file, you must set the activation function to custom manually.
 - set_desired_output -> void
 	
 	parameters:
@@ -197,7 +199,7 @@ Description:
 	parameters:
 	- input : Array\[float]
 	
-	Use it to set input. It will throw an error if the size of the input provided by you doesn't match the size of the actual input.
+	Use it to set input. It will throw an error if the size of the input provided by you doesn't match the size of the input layer.
 - run -> void
 	
 	No parameters.
@@ -208,9 +210,8 @@ Description:
 	parameters:
 	- iterations
 	
-	Use it to train neural network. Parameter "iterations" represents how many times the neural network will be training.
+	Use it to train neural network. The "iteration" parameter determines how many times the neural network will be trained.
 - get_output -> Array
-	
 	parameters:
 	- transform : bool = false
 	
@@ -350,5 +351,5 @@ TODO:
 - add save/load data functions to the GPUNNET class
 - make more optimizations
 
- 
-If you find any mistakes and misunderstandings in this documentation please report through github issues.
+
+ If you find any mistakes or misunderstandings in this documentation, please report them through GitHub issues.
