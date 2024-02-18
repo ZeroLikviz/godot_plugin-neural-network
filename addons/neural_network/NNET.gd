@@ -54,7 +54,7 @@ class TheRange:
 		min_value = buffer.min_value
 		max_value = buffer.max_value
 
-func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value : bool = false) -> void:
+func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value : bool = true) -> void:
 	learning_rate = learning_rate_value
 	is_using_bias = use_bias
 	
@@ -270,9 +270,10 @@ func train(laps : int = 1) -> void:
 func get_output(transform : bool = false) -> Array:
 	var buffer = neurons_out[last_layer].duplicate(true)
 	var i : int = 0
-	while i < buffer.size() * int(transform):
-		buffer[i] = buffer[i] * 2 - 1
-		i += 1
+	if activation_function_info == ActivationFunction.sigmoid:
+		while i < buffer.size() * int(transform):
+			buffer[i] = buffer[i] * 2 - 1
+			i += 1
 	return buffer
 
 func print_output(rearrange_by_range : bool = false) -> void:
