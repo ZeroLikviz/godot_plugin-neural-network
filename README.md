@@ -62,7 +62,9 @@ neural_network.print_output()
 ```
 The output will be something like this:
 `[0.48292014681138]`
+
 `[0.49121472848005]`
+
 `[0.512]`
 After this little test, you may want to use a bit more of the functionality the NNET class provides, like activation functions, saving and loading neural networks, etc.
 
@@ -130,7 +132,7 @@ All the other RLNNET functions you may want to use:
 This class is very similar to NNET, but there are some limitations and disadvantages:
 - after you are done with the variable of type GPUNNET, you must call the free_objects function.
 - there are no save/load data functions for the GPUNNET class. (I will add them by the 24-25th of February)
-- the allocated memory for the neurons is a rectangular 2D array, that means if you create a neural network with the structure like this \[1,10,50,5,1\], then 2D array with the size of 5 over 50 will be allocated for the neurons. That is 194 inactive neurons, so structure like \[1,50,50,50,1\] would be better for the memory usage.
+- the allocated memory for the neurons is a rectangular 2D array, that means if you create a neural network with the structure like this \[1,10,50,5,1\], then 2D array with the size of 5 times 50 will be allocated for the neurons. That is 194 inactive neurons, so structure like \[1,50,50,50,1\] would be better for the memory usage.
 
 
 Beside a few disadvantages, this class has one very powerful benefit: speed!
