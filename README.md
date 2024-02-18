@@ -3,6 +3,7 @@
 <img src="https://i.postimg.cc/9FWkc5GR/250-20240218012009.png" alt="NNET logotype" style="image-rendering: pixelated">
 </p>
 That is an asset for working with neural networks in Godot.
+
 -------
 
 ### NNET
@@ -23,6 +24,7 @@ var neural_network : NNET = NNET.new([1,5,1], 1.0, true)
 
 The neural network's structure looks like the image below if you define its structure as same as mine. (biases are not shown in the image)
 ![](https://i.postimg.cc/yN0pWDJP/249-20240217224512.png)
+ 
 Neural networks need input data, so provide some. You can do it using the set_input method
 ```GDScript
 neural_network.set_input([0.2])
