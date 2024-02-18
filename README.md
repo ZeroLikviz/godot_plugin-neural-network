@@ -12,11 +12,11 @@ To start working with the NNET class, create a variable of the type NNET, here's
 ...
 var neural_network : NNET = NNET.new(...)
 ```
-[Initialization](#^nnetinit) of \*NNET classes requires some parameters:
+Initialization of \*NNET classes requires some parameters:
 - structure, it may look like that: \[4,13,7,2\]
 - learning rate
 - true or false depending on whether you are going to use biases or not
-- <font style="color:grey">( Optionally )</font> true or false depending on whether you are going to use f'() or not  (see <font style="color:red">true_fd</font>)
+- <font style="color:grey">( Optionally )</font> true or false depending on whether you are going to use f'() or not
  
 And now we have something similar to this:
 ```GDScript
