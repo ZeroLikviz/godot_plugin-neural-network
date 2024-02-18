@@ -1,4 +1,4 @@
-# Neural Networks plugin for Godot
+# Neural Net Toolkit
 <p align="center">
 <img src="https://i.postimg.cc/9FWkc5GR/250-20240218012009.png" alt="NNET logotype" style="image-rendering: pixelated">
 </p>
