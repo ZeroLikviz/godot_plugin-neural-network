@@ -172,6 +172,7 @@ func free_objects() -> void:
 	device.free_rid(desired_output_storage)
 	
 	device.free_rid(pipeline)
+	RenderingServer.free_rid(uniform_set)
 	device.free_rid(shader)
 	
 	device.free()
