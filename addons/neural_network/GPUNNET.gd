@@ -155,7 +155,7 @@ func print_output() -> void:
 	print(get_output())
 
 func set_input(input : Array[float]) -> void:
-	assert(input.size() == layers[last_layer], "GPUNNET set_input LINE 157: Size of provided \"input\" doesn't match with the size of neural network's input. Provided input size: " + str(input.size()) + ". Neural network's input size: " + str(layers[0]) + ".")
+	assert(input.size() == layers[0], "GPUNNET set_input LINE 157: Size of provided \"input\" doesn't match with the size of neural network's input. Provided input size: " + str(input.size()) + ". Neural network's input size: " + str(layers[0]) + ".")
 	device.buffer_update(neurons_storage, 0, layers[0] * 4, PackedFloat32Array(input).to_byte_array())
 
 func set_desired_output(output : Array[float]) -> void:
