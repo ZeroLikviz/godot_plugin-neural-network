@@ -23,10 +23,9 @@ var last_layer : int
 var layers_size : int
 var is_bias_used : bool
 var neurons_max : int
-var true_fd : bool
 var x_workgroups : int
 
-func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value = false) -> void:
+func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true) -> void:
 	for layer in layers_construction:
 		assert(layer >= 1, "GPUNNET _init LINE 31: Amount of neurons in layer can't be less than 1")
 	
@@ -34,7 +33,6 @@ func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float =
 	shader = device.shader_create_from_spirv(load("res://addons/neural_network/GPUNNET.glsl").get_spirv())
 	pipeline = device.compute_pipeline_create(shader)
 	
-	true_fd = true_fd_value
 	is_bias_used = use_bias
 	learning_rate = learning_rate_value
 	last_layer=layers_construction.size()-1
@@ -47,13 +45,13 @@ func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float =
 	while i < layers_size: uint_layers.encode_u32(i * 4, layers[i]); i += 1
 	
 	var random_weights : PackedFloat32Array = PackedFloat32Array([])
-	random_weights.resize(layers_size * neurons_max * neurons_max)
+	random_weights.resize(last_layer * neurons_max * neurons_max)
 	i = 0; while i < random_weights.size(): random_weights[i] = randf_range(-1.0, 1.0); i += 1
 	
-	common_data            = device.storage_buffer_create(32)
+	common_data            = device.storage_buffer_create(28)
 	bias_storage           = device.storage_buffer_create(last_layer * neurons_max * 4)
 	deltas_storage         = device.storage_buffer_create(last_layer * neurons_max * 4)
-	weights_storage        = device.storage_buffer_create(layers_size * neurons_max * neurons_max * 4, random_weights.to_byte_array())
+	weights_storage        = device.storage_buffer_create(last_layer * neurons_max * neurons_max * 4, random_weights.to_byte_array())
 	structure_storage      = device.storage_buffer_create(layers_size * 4, uint_layers)
 	neurons_storage        = device.storage_buffer_create(layers_size * neurons_max* 4)
 	desired_output_storage = device.storage_buffer_create(layers[last_layer] * 4)
@@ -103,7 +101,7 @@ func set_layer(layer : int) -> void:
 
 func fill_data() -> void:
 	var data : PackedByteArray = PackedByteArray([])
-	data.resize(32)
+	data.resize(28)
 	data.encode_float(  0, learning_rate)
 	data.encode_u32(    4, last_layer   )
 	data.encode_u32(    8, layers_size  )
@@ -111,8 +109,7 @@ func fill_data() -> void:
 	data.encode_u32(   16, 1            )
 	data.encode_float( 20, float(is_bias_used))
 	data.encode_u32(   24, RUN          )
-	data.encode_u32(   28, float(true_fd))
-	device.buffer_update(common_data, 0, 32, data)
+	device.buffer_update(common_data, 0, 28, data)
 
 func run() -> void:
 	set_mode(RUN)
@@ -130,6 +127,7 @@ func train(laps : int = 1) -> void:
 		while i > 0:
 			set_layer(i)
 			submit()
+			print("train: find_deltas")
 			i -= 1
 		
 		set_mode(TRAIN)
@@ -137,6 +135,7 @@ func train(laps : int = 1) -> void:
 		while i < last_layer:
 			set_layer(i)
 			submit()
+			print("train: train_execution")
 			i += 1
 		if is_bias_used:
 			set_mode(BIAS_TRAIN)
@@ -144,9 +143,12 @@ func train(laps : int = 1) -> void:
 			while i < last_layer:
 				set_layer(i)
 				submit()
+				print("train: bias_train")
 				i += 1
 		iteration += 1
-		if iteration != laps: run()
+		if iteration != laps:
+			run()
+			print("train: run")
 
 func get_output() -> Array:
 	return device.buffer_get_data(neurons_storage, last_layer * neurons_max * 4, layers[last_layer] * 4).to_float32_array()
@@ -179,3 +181,25 @@ func free_objects() -> void:
 
 func free() -> void:
 	free_objects()
+
+func get_neurons(layer : int) -> Array:
+	return device.buffer_get_data(neurons_storage, layer * neurons_max * 4, layers[layer] * 4).to_float32_array()
+
+func print_neurons(layer : int) -> void:
+	print(get_neurons(layer))
+
+func get_weights(layer : int) -> Array:
+	var weights : PackedFloat32Array = PackedFloat32Array([])
+	var i : int = 0
+	while i < layers[layer]:
+		weights += device.buffer_get_data(weights_storage, (neurons_max * neurons_max * layer + i * neurons_max) * 4, layers[layer + 1] * 4).to_float32_array()
+		i += 1
+	return weights
+
+func print_weights(layer : int) -> void:
+	var data = get_weights(layer)
+	var i : int = 0
+	while i < layers[layer]:
+		var weights : Array = data.slice(i * layers[layer + 1], i * layers[layer + 1] + layers[layer + 1])
+		print("layer: ", layer, "; neuron: ", i, "; weights: ", weights)
+		i += 1
