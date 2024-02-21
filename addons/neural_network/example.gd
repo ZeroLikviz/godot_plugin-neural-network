@@ -32,6 +32,7 @@ func _ready() -> void:
 	print()
 	#perfomance_test()
 	#components_test()
+	#gpunnet_components_test()
 
 func components_test() -> void:
 	print("testing save/load systems: ")
@@ -40,9 +41,9 @@ func components_test() -> void:
 	NN.set_input([1.0])
 	NN.run()
 	var output : float = NN.get_output()[0]
-	print_rich("    [color=green]saving data[/color]")
+	print_rich("    [color=magenta]saving data[/color]")
 	NN.save_data("test data.txt")
-	print_rich("    [color=green]loading data[/color]")
+	print_rich("    [color=magenta]loading data[/color]")
 	var NN_container = NNET.new([1,1])
 	if NN_container.load_data("test data.txt") == -1:
 		print_rich("    [color=red]test was failed[/color]")
@@ -56,7 +57,7 @@ func components_test() -> void:
 	print("testing copy_from_file system :")
 	NN.print_info("NN", 4)
 	NN_container.print_info("NN_container", 4)
-	print_rich("    [color=green]copying data[/color]")
+	print_rich("    [color=magenta]copying data[/color]")
 	NN_container.copy_from_file("test data.txt")
 	NN_container.set_input([1.0])
 	NN_container.run()
@@ -99,3 +100,25 @@ func time_us(function : Callable) -> int:
 	function.call()
 	var time_end   = Time.get_ticks_usec()
 	return time_end - time_start
+
+func gpunnet_components_test():
+	print("testing GPUNNET class :")
+	print_rich("[color=magenta]    initializing GPUNNET network[/color]")
+	var gp : GPUNNET = GPUNNET.new([5,2], 1000.0, false)
+	print_rich("[color=magenta]    setting the input for GPUNNET network[/color]")
+	gp.set_input([0.0,0.0,0.0,0.0,0.0])
+	print_rich("[color=magenta]    invoking the GPUNNET run() method[/color]")
+	gp.run()
+	if not is_equal_approx(gp.get_output()[0], 0.5):
+		print_rich("    [color=red]test was failed[/color] : [color=magenta]",str(gp.get_output()[0]), " != 0.5","[/color]")
+	else: print_rich("    [color=green]test was passed[/color]")
+	gp.set_input([0.0,1.0,1.0,0.0,0.0])
+	print_rich("[color=magenta]    setting the desired output[/color]")
+	gp.set_desired_output([500.0,500.0])
+	print_rich("[color=magenta]    invoking GPUNNET train() method[/color]")
+	gp.train(50)
+	gp.run()
+	if not is_equal_approx(gp.get_output()[0], 1.0):
+		print_rich("    [color=red]test was failed[/color] : [color=magenta]",str(gp.get_output()[0]), " != 1.0","[/color]")
+	else: print_rich("    [color=green]test was passed[/color]")
+	gp.free_objects()
