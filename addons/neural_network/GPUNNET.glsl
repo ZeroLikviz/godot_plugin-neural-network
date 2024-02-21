@@ -99,7 +99,7 @@ void main() {
 			if( neuron < layers.data[data.layer] )
 			{
 				for(uint i = 0; i < layers.data[data.layer + 1]; ++i)
-					weights.data[d3(data.layer, neuron, i)] *= data.learning_rate * neurons.data[d2(data.layer, neuron)] * deltas.data[d2(data.layer, i)];
+					weights.data[d3(data.layer, neuron, i)] -= data.learning_rate * neurons.data[d2(data.layer, neuron)] * deltas.data[d2(data.layer, i)];
 			}
 			return;
 		};
