@@ -26,8 +26,9 @@ var neurons_max : int
 var x_workgroups : int
 
 func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true) -> void:
+	assert(layers_construction.size() >= 2, "GPUNNET _init LINE " + str(get_stack()[0]["line"]) + ": Neural network should have at least 2 layers")
 	for layer in layers_construction:
-		assert(layer >= 1, "GPUNNET _init LINE 31: Amount of neurons in layer can't be less than 1")
+		assert(layer >= 1, "GPUNNET _init LINE " + str(get_stack()[0]["line"]) + ": Amount of neurons in layer can't be less than 1")
 	
 	device = RenderingServer.create_local_rendering_device()
 	shader = device.shader_create_from_spirv(load("res://addons/neural_network/GPUNNET.glsl").get_spirv())
@@ -153,11 +154,11 @@ func print_output() -> void:
 	print(get_output())
 
 func set_input(input : Array[float]) -> void:
-	assert(input.size() == layers[0], "GPUNNET set_input LINE 158: Size of provided \"input\" doesn't match with the size of neural network's input. Provided input size: " + str(input.size()) + ". Neural network's input size: " + str(layers[0]) + ".")
+	assert(input.size() == layers[0], "GPUNNET set_input LINE " + str(get_stack()[0]["line"]) + ": Size of provided \"input\" doesn't match with the size of neural network's input. Provided input size: " + str(input.size()) + ". Neural network's input size: " + str(layers[0]) + ".")
 	device.buffer_update(neurons_storage, 0, layers[0] * 4, PackedFloat32Array(input).to_byte_array())
 
 func set_desired_output(output : Array[float]) -> void:
-	assert(output.size() == layers[last_layer], "GPUNNET set_desired_output LINE 162: Size of provided \"output\" doesn't match with the size of neural network's output. Provided output size: " + str(output.size()) + ". Neural network's output size: " + str(layers[last_layer]) + ".")
+	assert(output.size() == layers[last_layer], "GPUNNET set_desired_output LINE " + str(get_stack()[0]["line"]) + ": Size of provided \"output\" doesn't match with the size of neural network's output. Provided output size: " + str(output.size()) + ". Neural network's output size: " + str(layers[last_layer]) + ".")
 	device.buffer_update(desired_output_storage, 0, layers[last_layer] * 4, PackedFloat32Array(output).to_byte_array())
 
 func free_objects() -> void:
