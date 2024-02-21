@@ -127,7 +127,6 @@ func train(laps : int = 1) -> void:
 		while i > 0:
 			set_layer(i)
 			submit()
-			print("train: find_deltas")
 			i -= 1
 		
 		set_mode(TRAIN)
@@ -135,7 +134,6 @@ func train(laps : int = 1) -> void:
 		while i < last_layer:
 			set_layer(i)
 			submit()
-			print("train: train_execution")
 			i += 1
 		if is_bias_used:
 			set_mode(BIAS_TRAIN)
@@ -143,12 +141,10 @@ func train(laps : int = 1) -> void:
 			while i < last_layer:
 				set_layer(i)
 				submit()
-				print("train: bias_train")
 				i += 1
 		iteration += 1
 		if iteration != laps:
 			run()
-			print("train: run")
 
 func get_output() -> Array:
 	return device.buffer_get_data(neurons_storage, last_layer * neurons_max * 4, layers[last_layer] * 4).to_float32_array()
