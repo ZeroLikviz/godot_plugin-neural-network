@@ -4,8 +4,8 @@ class_name NNET
 var get_bias : Callable = func(layer : int, neuron : int) -> float:
 	return 0.0
 var f : Callable
-var fd : Callable = func(x : float) -> float:
-	return 1.0
+var fd : Callable = func (x : float) -> float:
+	return 1.0 - pow(f.call(x), 2)
 var neurons_out: Array[Array] = []
 var neurons_in: Array[Array] = []
 var deltas: Array[Array] = []
@@ -17,9 +17,7 @@ var learning_rate: float
 var layers_size: int
 var last_layer: int
 var is_using_bias: bool = false
-var true_fd: bool
 var train_run: bool = true
-var weights_table : Array = []
 
 enum ActivationFunction
 {
@@ -54,16 +52,11 @@ class TheRange:
 		min_value = buffer.min_value
 		max_value = buffer.max_value
 
-func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, true_fd_value : bool = false) -> void:
+func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true, back_compatibility_buffer : bool = true) -> void:
 	learning_rate = learning_rate_value
 	is_using_bias = use_bias
 	
 	set_function(ActivationFunction.sigmoid)
-	
-	if true_fd_value:
-		fd = func (x : float) -> float:
-			return 1.0 - pow(f.call(x), 2)
-	true_fd = true_fd_value
 	
 	layers = layers_construction
 	layers_size = layers.size()
@@ -87,17 +80,23 @@ func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0,
 	i = 0
 	
 	deltas[0].resize(0)
-	var weights_size: int = 0
+	
+	weights.resize(layers_size - 1)
 	while i < layers_size - 1:
-		weights_size += layers[i] * layers[i + 1]
+		weights[i] = []
+		weights[i].resize(layers[i])
+		var j : int = 0
+		while j < layers[i]:
+			weights[i][j] = []
+			weights[i][j].resize(layers[i + 1])
+			var k : int = 0
+			while k < layers[i + 1]:
+				weights[i][j][k] = randf_range(-1.0,1.0)
+				k += 1
+			j += 1
 		i += 1
-	weights.resize(weights_size)
 	i = 0
 	
-	
-	while i < weights_size:
-		weights[i] = randf_range(-1.0, 1.0)
-		i += 1
 	output.resize(layers[last_layer])
 	output.fill(0.0)
 
@@ -116,54 +115,24 @@ func _init(layers_construction: Array = [1,1], learning_rate_value: float = 1.0,
 				j += 1
 			i += 1
 	
-	fill_table_of_weights()
-
-func fill_table_of_weights() -> void:
-	weights_table.resize(layers_size - 1)
-	var i : int = 0
-	while i < layers_size - 1:
-		weights_table[i] = []
-		weights_table[i].resize(layers[i])
-		var j : int = 0
-		while j < layers[i]:
-			weights_table[i][j] = []
-			weights_table[i][j].resize(layers[i + 1])
-			var z : int = 0
-			while z < layers[i + 1]:
-				weights_table[i][j][z] = get_weight(i, j, i + 1, z)
-				z += 1
-			j += 1
-		i += 1
-
-func get_tabled_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
-	var buffer = neuron1
-	var bool1 = int(layer1 > layer2)
-	var bool2 = 1 - bool1
-	layer1 = min(layer1, layer2)
-	neuron1 = neuron2 * bool1 + neuron1 * bool2
-	neuron2 = buffer * bool1 + neuron2 * bool2
-	return weights_table[layer1][neuron1][neuron2]
 
 func set_function(function : ActivationFunction) -> void:
 	match function:
 		ActivationFunction.linear:
 			f = func (x : float) -> float:
 				return x
-			if true_fd:
-				fd = func (x : float) -> float:
-					return 1.0
+			fd = func (x : float) -> float:
+				return 1.0
 		ActivationFunction.sigmoid:
 			f = func (x : float) -> float:
 				return 1.0 / (pow(2.7182, -x) + 1.0)
-			if true_fd:
-				fd = func (x : float) -> float:
-					return f.call(x) * (1.0 - f.call(x))
+			fd = func (x : float) -> float:
+				return f.call(x) * (1.0 - f.call(x))
 		ActivationFunction.ReLU:
 			f = func (x : float) -> float:
 				return max(0.0, x)
-			if true_fd:
-				fd = func (x : float) -> float:
-					return 1.0;
+			fd = func (x : float) -> float:
+				return bool(x);
 	activation_function_info = function
 
 func set_custom_function(function : Callable) -> void:
@@ -171,9 +140,8 @@ func set_custom_function(function : Callable) -> void:
 	assert(typeof(function.get_bound_arguments()[0]) == TYPE_FLOAT, "argument type should be x")
 	f = function
 	activation_function_info = ActivationFunction.custom
-	if true_fd:
-		fd = func (x : float) -> float:
-			return (f.call(x + 0.00001) - f.call(x)) / 0.00001
+	fd = func (x : float) -> float:
+		return (f.call(x + 0.00001) - f.call(x)) / 0.00001
 
 func set_desired_output(desired_output: Array[float]) -> void:
 	assert(desired_output.size() == layers[last_layer], "set_desired_output: sizes doesn't fit")
@@ -186,22 +154,6 @@ func set_input(input: Array[float]) -> void:
 	neurons_out[0] = input.duplicate(true)
 	train_run = true
 
-func get_weight(layer1: int, neuron1: int, layer2: int, neuron2: int) -> int:
-	if layer1 > layer2:
-		var buff1 = layer1
-		layer1 = layer2
-		layer2 = buff1
-		var buff2 = neuron1
-		neuron1 = neuron2
-		neuron2 = buff2
-	var weight_position: int = 0
-	var i: int = 0
-	while i < layer1:
-		weight_position += layers[i] * layers[i + 1]
-		i += 1
-	weight_position += neuron1 * layers[layer2] + neuron2
-	return weight_position
-
 func run() -> void:
 	train_run = false
 	var layer : int = 1
@@ -211,7 +163,7 @@ func run() -> void:
 			neurons_in[layer][neuron] = get_bias.call(layer - 1,neuron)
 			var back_neuron : int = 0
 			while back_neuron < layers[layer - 1]:
-				neurons_in[layer][neuron] += weights[get_tabled_weight(layer, neuron, layer - 1, back_neuron)] * neurons_out[layer - 1][back_neuron]
+				neurons_in[layer][neuron] += weights[layer - 1][back_neuron][neuron] * neurons_out[layer - 1][back_neuron]
 				back_neuron += 1
 			neurons_out[layer][neuron] = f.call(neurons_in[layer][neuron])
 			neuron += 1
@@ -231,7 +183,7 @@ func compute_deltas() -> void:
 			deltas[layer][neuron] = 0.0
 			var after_neuron : int = 0
 			while after_neuron < layers[layer + 1]:
-				deltas[layer][neuron] += deltas[layer + 1][after_neuron] * weights[get_tabled_weight(layer, neuron, layer + 1, after_neuron)]
+				deltas[layer][neuron] += deltas[layer + 1][after_neuron] * weights[layer][neuron][after_neuron]
 				after_neuron += 1
 			deltas[layer][neuron] *= fd.call(neurons_in[layer][neuron])
 			neuron += 1
@@ -253,7 +205,7 @@ func train(laps : int = 1) -> void:
 			while neuron < layers[layer]:
 				var after_neuron : int = 0
 				while after_neuron < layers[layer + 1]:
-					weights[get_tabled_weight(layer, neuron, layer + 1, after_neuron)] -= learning_rate * deltas[layer + 1][after_neuron] * neurons_out[layer][neuron]
+					weights[layer][neuron][ after_neuron] -= learning_rate * deltas[layer + 1][after_neuron] * neurons_out[layer][neuron]
 					after_neuron += 1
 				neuron += 1
 			layer -= 1
@@ -280,7 +232,7 @@ func print_output(rearrange_by_range : bool = false) -> void:
 	print(get_output(rearrange_by_range))
 
 func duplicate():
-	var buffer = NNET.new(layers, learning_rate, is_using_bias, true_fd)
+	var buffer = NNET.new(layers, learning_rate, is_using_bias)
 	buffer.output.assign(output)
 	buffer.neurons_out[last_layer].assign(neurons_out[last_layer])
 	buffer.neurons_out[0].assign(neurons_out[0])
@@ -303,17 +255,11 @@ func assign(buffer : NNET) -> void:
 	biases.assign(buffer.biases.duplicate(true))
 	weights.assign(buffer.weights)
 	deltas.assign(buffer.deltas.duplicate(true))
-	true_fd = buffer.true_fd
 	train_run = buffer.train_run
 	learning_rate = buffer.learning_rate
 	is_using_bias = buffer.is_using_bias
 	layers_size = buffer.layers_size
 	last_layer = buffer.last_layer
-	weights_table.resize(buffer.weights_table.size())
-	var i : int = 0
-	while i < weights_table.size():
-		weights_table[i] = buffer.weights_table[i].duplicate(true)
-		i += 1
 
 func save_data(file_name : String) -> void:
 	if not DirAccess.dir_exists_absolute("res://addons/neural_network/data/"):
@@ -324,12 +270,14 @@ func save_data(file_name : String) -> void:
 		file = FileAccess.open(file_name, FileAccess.WRITE)
 	file.store_8(int(activation_function_info))
 	file.store_8(int(is_using_bias))
-	file.store_8(int(true_fd))
+	file.store_8(1)
 	file.store_64(layers_size)
 	for layer in layers:
 		file.store_64(layer)
-	for weight in weights:
-		file.store_double(weight)
+	for weight_1 in weights:
+		for weight_2 in weight_1:
+			for weight in weight_2:
+				file.store_double(weight)
 	for bias_layer in biases:
 		for bias in bias_layer:
 			file.store_double(bias)
@@ -349,7 +297,7 @@ func load_data(file_name : String) -> int:
 		printerr("NNET.gd printerr LINE 349: neural network structure doesn't fit")
 		assign(buffer)
 		return ERR_INVALID_DATA
-	true_fd = file.get_8(); set_function(info)
+	file.get_8(); set_function(info)
 	if layers_size != file.get_64():
 		printerr("NNET.gd printerr LINE 354: neural network structure doesn't fit")
 		assign(buffer)
@@ -367,7 +315,13 @@ func load_data(file_name : String) -> int:
 			printerr("NNET.gd printerr LINE 367: neural network structure doesn't fit")
 			assign(buffer)
 			return ERR_INVALID_DATA
-		weights[i] = file.get_double()
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				weights[i][j][k] = file.get_double()
+				k += 1
+			j += 1
 		i += 1
 	i = 0
 	while i < biases.size():
@@ -378,7 +332,7 @@ func load_data(file_name : String) -> int:
 				corrupted = true
 				printerr("NNET.gd printerr LINE 379: neural network structure doesn't fit")
 				assign(buffer)
-				return -1
+				return ERR_INVALID_DATA
 			biases[i][j] = file.get_double()
 			j += 1
 		i += 1
@@ -387,9 +341,8 @@ func load_data(file_name : String) -> int:
 	if corrupted or not file.eof_reached():
 		assign(buffer)
 		printerr("NNET.gd printerr LINE 389: neural network structure doesn't fit")
-		return -1
+		return ERR_INVALID_DATA
 	file.close()
-	fill_table_of_weights()
 	return OK
 
 func copy_from_file(file_name : String) -> void:
@@ -399,19 +352,18 @@ func copy_from_file(file_name : String) -> void:
 		file = FileAccess.open(file_name, FileAccess.READ)
 	var function_info_file = file.get_8()
 	var bias_fbool : bool = file.get_8()
-	var true_fd_fvalue = file.get_8()
+	file.get_8()
 	var size = file.get_64()
 	var structure_farray = []
 	var i : int = 0
 	while i < size:
 		structure_farray.append(file.get_64())
 		i += 1
-	var buffer : NNET = NNET.new(structure_farray, learning_rate, bias_fbool, true_fd_fvalue)
+	var buffer : NNET = NNET.new(structure_farray, learning_rate, bias_fbool)
 	file.close()
 	buffer.load_data(file_name)
 	assign(buffer)
 	set_function(function_info_file)
-	fill_table_of_weights()
 
 func print_info(NeuralNetworkName : String, offset : int = 0, print_weights : bool = false) -> void:
 	var offset_string : String = ""
@@ -423,7 +375,6 @@ func print_info(NeuralNetworkName : String, offset : int = 0, print_weights : bo
 	print(offset_string + "    structure:           " + str(layers))
 	print(offset_string + "    bias using:          " + str(is_using_bias))
 	print(offset_string + "    learning rate:       " + str(learning_rate))
-	print(offset_string + "    true f'():           " + str(true_fd))
 	if print_weights: print(offset_string + "    weights:             " + str(weights))
 	var function : String = "custom"
 	match activation_function_info:
