@@ -35,7 +35,7 @@ func _ready() -> void:
 	#gpunnet_components_test()
 
 func components_test() -> void:
-	print("testing save/load systems: ")
+	print("testing save/load systems : ")
 	var NN = NNET.new([1,1])
 	NN.set_function(NNET.ActivationFunction.linear)
 	NN.set_input([1.0])
@@ -53,7 +53,6 @@ func components_test() -> void:
 		print_rich("    [color=green]test was passed[/color]")
 	else: print_rich("    [color=red]test was failed[/color] : [color=yellow]" + str(output) + " != " + str(NN_container.get_output()[0]) + "[/color]")
 	
-	print()
 	print("testing copy_from_file system :")
 	NN.print_info("NN", 4)
 	NN_container.print_info("NN_container", 4)
@@ -121,4 +120,32 @@ func gpunnet_components_test():
 	if not is_equal_approx(gp.get_output()[0], 1.0):
 		print_rich("    [color=red]test was failed[/color] : [color=magenta]",str(gp.get_output()[0]), " != 1.0","[/color]")
 	else: print_rich("    [color=green]test was passed[/color]")
+	
+	print("testing save/load systems : ")
+	var output = gp.get_output()[0]
+	
+	pmstr("    saving data")
+	if  gp.save_data("test_example.gd.data") != OK: print_rich(rstr("test was failed: load_data function failed"))
+	var gp2 : GPUNNET = GPUNNET.new()
+	pmstr("    loading data")
+	if gp2.load_data("test_example.gd.data") != OK: print_rich(rstr("test was failed: load_data function failed"))
+	gp2.set_input(gp.get_neurons(0))
+	gp2.run()
+	if not is_equal_approx(output, gp2.get_output()[0]):
+		print_rich("    [color=red]test was failed[/color] : [color=magenta]",str(gp2.get_output()[0]), " != ", output,"[/color]")
+	else: print_rich("    [color=green]test was passed[/color]")
 	gp.free_objects()
+	gp2.free_objects()
+
+static func mstr(str: String) -> String:
+	return "[color=magenta]" + str + "[/color]"
+static func rstr(str: String) -> String:
+	return "[color=red]" + str + "[/color]"
+static func ystr(str: String) -> String:
+	return "[color=yellow]" + str + "[/color]"
+func pmstr(str : String) -> void:
+	print_rich(mstr(str))
+func prstr(str : String) -> void:
+	print_rich(rstr(str))
+func pystr(str : String) -> void:
+	print_rich(ystr(str))
