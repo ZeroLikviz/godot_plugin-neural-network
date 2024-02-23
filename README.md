@@ -133,7 +133,6 @@ All the other RLNNET functions you may want to use:
 ### GPUNNET
 This class is very similar to NNET, but there are some limitations and disadvantages:
 - after you are done working with the variable of type GPUNNET, you must call the free_objects function.
-- there are no save/load data functions for the GPUNNET class. (I will add them by the 24-25th of February)
 - the allocated memory for the neurons is a rectangular 2D array, that means if you create a neural network with the structure like this \[1,10,50,5,1\], then 2D array with the size of 5 times 50 will be allocated for the neurons. That is 193 inactive neurons, so structure like \[1,50,50,50,1\] would be better for the memory usage.
 
 
@@ -346,10 +345,8 @@ Description:
 --------
 
 
-
 TODO:
-- add save/load data functions to the GPUNNET class
-- make more optimizations
+- learn more about reinforcement learning.
 
 
  If you find any errors or misunderstandings in this documentation or want to suggest any improvements for this plugin, please report them via GitHub issues
