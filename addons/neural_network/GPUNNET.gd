@@ -13,9 +13,9 @@ var weights_storage        : RID
 var structure_storage      : RID
 var desired_output_storage : RID
 
-var pipeline     : RID
-var uniform_set  : RID
-var shader       : RID      
+var pipeline     : Array[RID]
+var uniform_set  : Array[RID]
+var shader       : Array[RID]
 
 var learning_rate : float
 var layers : Array[int]
@@ -25,14 +25,19 @@ var is_bias_used : bool
 var neurons_max : int
 var x_workgroups : int
 
+func init_snp(index : int, file : String, uniforms : Array[RDUniform]) -> void:
+	shader[index] = device.shader_create_from_spirv(load(file).get_spirv())
+	pipeline[index] = device.compute_pipeline_create(shader[index])
+
 func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float = 1.0, use_bias: bool = true) -> void:
 	assert(layers_construction.size() >= 2, "GPUNNET _init LINE " + str(get_stack()[0]["line"]) + ": Neural network should have at least 2 layers")
 	for layer in layers_construction:
 		assert(layer >= 1, "GPUNNET _init LINE " + str(get_stack()[0]["line"]) + ": Amount of neurons in layer can't be less than 1")
 	
 	device = RenderingServer.create_local_rendering_device()
-	shader = device.shader_create_from_spirv(load("res://addons/neural_network/GPUNNET.glsl").get_spirv())
-	pipeline = device.compute_pipeline_create(shader)
+	shader.resize(4)
+	pipeline.resize(4)
+	uniform_set.resize(4)
 	
 	is_bias_used = use_bias
 	learning_rate = learning_rate_value
@@ -69,9 +74,25 @@ func _init(layers_construction: Array[int] = [1,1], learning_rate_value: float =
 	uniforms.append(create_uniform(neurons_storage,       5))
 	uniforms.append(create_uniform(desired_output_storage,  6))
 	
-	uniform_set = device.uniform_set_create(uniforms, shader, 0)
+	init_snp(RUN        , "res://addons/neural_network/GPUNNET_RUN.glsl"        , uniforms)
+	init_snp(FIND_DELTAS, "res://addons/neural_network/GPUNNET_FIND_DELTAS.glsl", uniforms)
+	init_snp(TRAIN      , "res://addons/neural_network/GPUNNET_TRAIN.glsl"      , uniforms)
+	init_snp(BIAS_TRAIN , "res://addons/neural_network/GPUNNET_BIAS_TRAIN.glsl" , uniforms)
+	uniform_set[RUN] = device.uniform_set_create(get_unifroms_array(uniforms, [0,1,3,4,5]), shader[RUN], 0)
+	uniform_set[FIND_DELTAS] = device.uniform_set_create(get_unifroms_array(uniforms, [0,2,3,4,5,6]), shader[FIND_DELTAS], 0)
+	uniform_set[TRAIN] = device.uniform_set_create(get_unifroms_array(uniforms, [0,2,3,4,5]), shader[TRAIN], 0)
+	uniform_set[BIAS_TRAIN] = device.uniform_set_create(get_unifroms_array(uniforms, [0,1,2,4]), shader[BIAS_TRAIN], 0)
 	
 	x_workgroups = int(floor(float(neurons_max) / 64.0)) + 1
+
+func get_unifroms_array(uniforms : Array[RDUniform], pos : Array[int]) -> Array[RDUniform]:
+	var uniforms_array : Array[RDUniform] = []
+	uniforms_array.resize(pos.size())
+	var i : int = 0
+	for unif in pos:
+		uniforms_array[i] = uniforms[unif]
+		i += 1
+	return uniforms_array
 
 func create_uniform(rid : RID, binding : int) -> RDUniform:
 	var uniform = RDUniform.new()
@@ -80,20 +101,15 @@ func create_uniform(rid : RID, binding : int) -> RDUniform:
 	uniform.add_id(rid)
 	return uniform
 
-func submit() -> void:
+func submit(mode : int) -> void:
 	var compute_list := device.compute_list_begin()
-	device.compute_list_bind_compute_pipeline(compute_list, pipeline)
-	device.compute_list_bind_uniform_set(compute_list, uniform_set, 0)
+	device.compute_list_bind_compute_pipeline(compute_list, pipeline[mode])
+	device.compute_list_bind_uniform_set(compute_list, uniform_set[mode], 0)
 	device.compute_list_dispatch(compute_list, x_workgroups,1,1)
 	device.compute_list_end()
 	
 	device.submit()
 	device.sync()
-
-func set_mode(mode : int) -> void:
-	var data : PackedByteArray = PackedByteArray([]); data.resize(4)
-	data.encode_u32(0, mode)
-	device.buffer_update(common_data, 24, 4, data)
 
 func set_layer(layer : int) -> void:
 	var data : PackedByteArray = PackedByteArray([]); data.resize(4)
@@ -113,35 +129,31 @@ func fill_data() -> void:
 	device.buffer_update(common_data, 0, 28, data)
 
 func run() -> void:
-	set_mode(RUN)
 	var i : int = 1
 	while i < layers_size:
 		set_layer(i)
-		submit()
+		submit(RUN)
 		i += 1
 
 func train(laps : int = 1) -> void:
 	var iteration = 0
 	while iteration < laps:
-		set_mode(FIND_DELTAS)
 		var i : int = last_layer
 		while i > 0:
 			set_layer(i)
-			submit()
+			submit(FIND_DELTAS)
 			i -= 1
 		
-		set_mode(TRAIN)
 		i = 0
 		while i < last_layer:
 			set_layer(i)
-			submit()
+			submit(TRAIN)
 			i += 1
 		if is_bias_used:
-			set_mode(BIAS_TRAIN)
 			i = 0
 			while i < last_layer:
 				set_layer(i)
-				submit()
+				submit(BIAS_TRAIN)
 				i += 1
 		iteration += 1
 		if iteration != laps:
@@ -170,9 +182,10 @@ func free_objects() -> void:
 	device.free_rid(structure_storage)
 	device.free_rid(desired_output_storage)
 	
-	device.free_rid(pipeline)
-	RenderingServer.free_rid(uniform_set)
-	device.free_rid(shader)
+	var i : int = 0; while i < 4:
+		device.free_rid(pipeline[i])
+		RenderingServer.free_rid(uniform_set[i])
+		device.free_rid(shader[i]); i += 1
 	
 	device.free()
 
@@ -200,3 +213,4 @@ func print_weights(layer : int) -> void:
 		var weights : Array = data.slice(i * layers[layer + 1], i * layers[layer + 1] + layers[layer + 1])
 		print("layer: ", layer, "; neuron: ", i, "; weights: ", weights)
 		i += 1
+
