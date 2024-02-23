@@ -165,11 +165,11 @@ func get_output() -> Array:
 func print_output() -> void:
 	print(get_output())
 
-func set_input(input : Array[float]) -> void:
+func set_input(input : Array) -> void:
 	assert(input.size() == layers[0], "GPUNNET set_input LINE " + str(get_stack()[0]["line"]) + ": Size of provided \"input\" doesn't match with the size of neural network's input. Provided input size: " + str(input.size()) + ". Neural network's input size: " + str(layers[0]) + ".")
 	device.buffer_update(neurons_storage, 0, layers[0] * 4, PackedFloat32Array(input).to_byte_array())
 
-func set_desired_output(output : Array[float]) -> void:
+func set_desired_output(output : Array) -> void:
 	assert(output.size() == layers[last_layer], "GPUNNET set_desired_output LINE " + str(get_stack()[0]["line"]) + ": Size of provided \"output\" doesn't match with the size of neural network's output. Provided output size: " + str(output.size()) + ". Neural network's output size: " + str(layers[last_layer]) + ".")
 	device.buffer_update(desired_output_storage, 0, layers[last_layer] * 4, PackedFloat32Array(output).to_byte_array())
 
@@ -214,3 +214,162 @@ func print_weights(layer : int) -> void:
 		print("layer: ", layer, "; neuron: ", i, "; weights: ", weights)
 		i += 1
 
+func save_data(file_name : String) -> int:
+	var file := FileAccess.open(full_path(file_name), FileAccess.WRITE)
+	if ! file.is_open(): return ERR_FILE_CANT_OPEN
+	file.store_8(1)
+	file.store_8(is_bias_used)
+	file.store_8(1)
+	file.store_64(layers_size)
+	for layer in layers:
+		file.store_64(layer)
+	var weights : Array = []
+	var i : int = 0; while i < last_layer:
+		weights.append_array(get_weights(i)); i += 1
+	for weight in weights:
+		file.store_double(weight)
+	if is_bias_used:
+		var biases : Array = []
+		i = 1; while i < layers_size:
+			biases.append_array(get_biases(i))
+			i += 1
+		for bias in biases:
+			file.store_double(bias)
+	file.close()
+	return OK
+
+func load_data(file_name : String) -> int:
+	if is_corrupted(file_name): return ERR_FILE_CORRUPT
+	var file := FileAccess.open(full_path(file_name), FileAccess.READ)
+	if ! file.is_open(): return ERR_CANT_OPEN
+	file.get_8()
+	var bias : bool = file.get_8()
+	file.get_8()
+	var size : int = file.get_64()
+	var structure : Array[int] = []
+	structure.resize(size)
+	var i : int = 0
+	while i < size:
+		structure[i] = file.get_64(); i += 1
+	
+	var weights : PackedFloat32Array = PackedFloat32Array([])
+	var nmax : int = structure.max()
+	weights.resize(nmax * (size - 1) * nmax )
+	
+	var d3 : Callable = func(x,y,z) -> int:
+		return x * nmax * nmax + y * nmax + z
+	
+	var good : Callable = func(x,y,z) -> bool:
+		if y < structure[x]:
+			if z < structure[x + 1]:
+				return true
+		return false
+	
+	i = 0
+	var j : int = 0
+	var k : int = 0
+	while i < size - 1:
+		j = 0
+		while j < nmax:
+			k = 0
+			while k < nmax:
+				if good.call(i,j,k):
+					weights[d3.call(i,j,k)] = file.get_double()
+				k += 1
+			j += 1
+		i += 1
+	
+	var biases : PackedFloat32Array = PackedFloat32Array([])
+	if bias:
+		biases.resize((size - 1) * nmax )
+		i = 0
+		while i < size - 1:
+			j = 0
+			while j < nmax:
+				biases[i * nmax + j] = file.get_double()
+				j += 1
+			i += 1
+	
+	var buffer : GPUNNET = GPUNNET.new(structure, 1.0, bias)
+	buffer.device.buffer_update(buffer.weights_storage, 0, weights.size() * 4, weights.to_byte_array())
+	buffer.device.buffer_update(buffer.bias_storage, 0, biases.size() * 4, biases.to_byte_array())
+	assign(buffer)
+	
+	return OK
+
+func is_same_structure(buffer : GPUNNET) -> bool:
+	if layers != buffer.layers: return false
+	if is_bias_used != buffer.is_bias_used: return false
+	return true
+
+func is_same_structure_file(file_name : String) -> bool:
+	if is_corrupted(file_name): return false
+	var file := FileAccess.open(full_path(file_name), FileAccess.READ)
+	if ! file.is_open(): return false
+	file.get_8()
+	if file.get_8() != int(is_bias_used): return false
+	file.get_8()
+	if file.get_64() != layers_size: return false
+	var i : int = 0; while i < layers_size:
+		if layers[i] != file.get_64(): return false
+		i += 1
+	file.close()
+	return true
+
+static func is_corrupted(file_name : String) -> bool:
+	if ! FileAccess.file_exists(full_path(file_name)): true
+	var file := FileAccess.open(full_path(file_name), FileAccess.READ)
+	if ! file.is_open(): return true
+	var size : int = file.get_length()
+	if size < 35: return true
+	file.get_8()
+	var bias : bool = file.get_8()
+	file.get_8()
+	var the_layers_size : int = file.get_64(); if the_layers_size < 2: return true
+	var the_layers : Array[int] = []
+	the_layers.resize(the_layers_size)
+	var i : int = 0; while i < the_layers_size:
+		the_layers[i] = file.get_64();
+		if the_layers[i] < 1: return true
+		i += 1
+	if file.eof_reached(): return true
+	var biases : int = 0
+	if bias:
+		i = 1; while i < the_layers_size:
+			biases += the_layers[i]; i += 1
+	var weights : int = 0
+	i = 0; while i < the_layers_size - 1:
+		weights += the_layers[i] * the_layers[i + 1]; i += 1
+	var total : int = biases * 8 + weights * 8 + the_layers_size * 8 + 11
+	if file.get_length() == total: return false
+	print("file size: ", file.get_length(), " required size: ", total)
+	return true
+
+static func full_path(file_name : String) -> String:
+	if file_name.begins_with("res://") or file_name.begins_with("user://"):
+		return file_name
+	return "res://addons/neural_network/data/" + file_name
+
+func get_biases(layer : int) -> Array:
+	assert(layer > 0, "There is no biases for layer " + str(layer))
+	device.buffer_get_data(bias_storage, (layer - 1) * neurons_max * 4, layers[layer] * 4).to_float32_array()
+	return []
+
+func print_biases(layer : int) -> void:
+	print(get_biases(layer))
+
+func assign(buffer : GPUNNET) -> void:
+	free_objects()
+	_init(buffer.layers, buffer.learning_rate, buffer.is_bias_used)
+	device.buffer_update(neurons_storage, 0, layers[0] * 4, buffer.get_neurons(0))
+	device.buffer_update(desired_output_storage, 0, layers[last_layer] * 4, buffer.device.buffer_get_data(buffer.desired_output_storage))
+	device.buffer_update(weights_storage, 0, last_layer * neurons_max * neurons_max * 4, buffer.device.buffer_get_data(buffer.weights_storage))
+	if is_bias_used: device.buffer_update(bias_storage, 0, last_layer * neurons_max * 4, buffer.device.buffer_get_data(buffer.bias_storage))
+
+func duplicate() -> GPUNNET:
+	var buffer : GPUNNET = GPUNNET.new([1,1])
+	buffer.assign(self)
+	return buffer
+
+func set_learning_rate(rate : float) -> void:
+	device.buffer_update(common_data, 0, 4, PackedFloat32Array([rate]).to_byte_array())
