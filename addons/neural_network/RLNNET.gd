@@ -13,19 +13,18 @@ func _init(layers_construction: Array = [1,1], curiosity_rate_a: float = 0.25, u
 	main.assign(NNET.new(layers_construction, 0.1, use_bias, afd_a))
 	buffer.assign(main.duplicate())
 	curiosity_rate = curiosity_rate_a
-
 func mutate() -> void:
 	has_runned = false
-	var i : int = 0
-	var size : int = buffer.weights.size()
-	while i < size:
-		buffer.weights[i] += randf_range(-curiosity_rate, curiosity_rate)
-		i += 1
-	for layer in range(buffer.biases.size()):
-		i = 0
-		while i < buffer.biases[layer].size():
-			buffer.biases[layer][i] += randf_range(-curiosity_rate, curiosity_rate)
-			i += 1
+
+	# Loop through each layer in the weights
+	for layer in range(buffer.weights.size()):
+		# Loop through each node in the layer
+		for node in range(buffer.weights[layer].size()):
+			# Loop through each weight of the node and mutate it
+			for weight_index in range(buffer.weights[layer][node].size()):
+				buffer.weights[layer][node][weight_index] += randf_range(-curiosity_rate, curiosity_rate)
+
+	# If biases were not empty, similar nested loops would be required
 
 func set_input(input : Array[float]) -> void:
 	main.set_input(input.duplicate(true))
