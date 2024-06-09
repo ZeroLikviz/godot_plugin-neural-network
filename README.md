@@ -79,7 +79,7 @@ var output = nn.get_output()
 var logits = nn.get_logits()
 ```
 List of useful functions and functions for testing:
-- **run**()   -   makes NN to *predict* outputs. Don't forget to disable dropout, if you had enabled it.
+- **run**()   -   makes NN to predict output. Don't forget to disable dropout, if you had enabled it.
 - **get_output**()
 - **get_logits**()   -   you can get raw data of neurons from the last layer through this function.
 - **print_output**()   -   as the name suggests this function prints output.
