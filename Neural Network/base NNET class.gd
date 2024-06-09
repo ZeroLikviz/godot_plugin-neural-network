@@ -12,7 +12,7 @@ enum ActivationFunctions
 	ReLU,
 	mish,
 	swish,
-	softmax # does's not work yet
+	softmax
 }
 
 enum Algorithm
@@ -26,7 +26,7 @@ enum LossFunctions
 	MSE,
 	MAE,
 	BCE,
-	CCE, # don't forget to set act. function of last layer to softmax using Categorical Crossentropy
+	CCE, # don't forget to set activation function of the last layer to softmax when using Categorical Crossentropy
 	Hinge_loss,
 	Cosine_similarity_loss,
 	LogCosh_loss
