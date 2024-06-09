@@ -3,7 +3,7 @@
   <img src="https://i.postimg.cc/7689k1gx/NNET-logo.png" alt="NNET logo" />
 </div>
 
-**NNET is an add-on which provides you functionality to work with neural network.**
+**NNET is an add-on which provides you functionality for working with neural networks.**
 
 Any suggestions, ideas, improvements are welcome. If you want to share them, you can do so by submitting Github issue. I'll try my best implementing your ideas, although I don't promise anything, if I can't add them, then I won't add them. Also if you find a bug please report it.
 
