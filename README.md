@@ -25,7 +25,9 @@ Function **new** accepts 3 parameters:
 
 Now that you have created your NN, you can keep adjusting it. Here'are functions for it:
 - **use_backpropagation**( learning_rate )   -   makes train function use backpropagation.
-- **use_resilient_propagation**( update_value = 0.0125, multiplication_factor = 1.2, reduction_factor = 0.3, max_step = 1.0, min_step = 0.000001 )   -   makes train function use resilient propagation. This function has multiple parameters to adjust, though adjusting them all might be a little tedious, so they all have standard values.
+- **use_resilient_propagation**( update_value = 0.0125, multiplication_factor = 1.2, reduction_factor = 0.3, max_step = 1.0, min_step = 0.000001 )   -   makes train function use resilient propagation. This function has multiple parameters to adjust, though adjusting them all might be a little
+tedious, so they all have standard values.
+- **use_Adam**( learning_rate, beta_1 = 0.9, beta_2 = 0.999, new_weight_decay = 0.0 )   -   makes train function use Adam.
 - **enable_dropout**( probability )   -   enables dropout, which is used to prevent NN from overfitting. Don't forget to disable dropout after training/before testing.
 - **disable_dropout**() - disables dropout.
 - **set_function**( function, layer )   -   *function* can be either Callable(x : float) -> float or belong to BaseNNET.ActivationFunctions. Here they're:
