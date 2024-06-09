@@ -155,7 +155,7 @@ func set_specific_function(callable : Array, dcallable : Array, pos : int, funct
 			layer_der.resize(structure[layer])
 			var i : int = 0; while i < structure[layer]:
 				layer_der[i] = (neurons_out[layer][i] \
-				- neurons_out[layer][i] + BaseNNET.apzero) / BaseNNET.apzero
+				- user_functions[pos].call(neurons_in[layer][i] + BaseNNET.apzero)) / BaseNNET.apzero
 				i += 1
 	elif function is BaseNNET.ActivationFunctions:
 		current_function = function
