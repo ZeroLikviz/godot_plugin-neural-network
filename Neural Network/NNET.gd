@@ -10,6 +10,10 @@ var biases : Array = []
 var deltas : Array = []
 var target : Array = [] # desired output
 var signs : Array = []
+var moments : Array = []
+var smoments : Array = []
+var bias_moments : Array = [] # moments for biases
+var bias_smoments : Array = [] # smoments for biases
 var bias_signs : Array = []
 var active_neurons : Array = []
 var current_function : BaseNNET.ActivationFunctions
@@ -33,6 +37,10 @@ var loss : Callable
 var layer_ratio : Callable # for dropout algorithm
 var dropout_neurons : Callable
 var bias_consts : Array = [] # adding softmax avoiding performance issues required serious changes, and this variable is one of the consequences of adding softmax. :P
+var beta1 : float # for Adam
+var beta2 : float # for Adam
+var weight_decay : float # for Adam
+
 
 func _init(new_structure : Array, learning_rate : float, use_bias : bool) -> void:
 	if not is_structure_valid(new_structure):
@@ -244,14 +252,12 @@ func set_specific_function(callable : Array, dcallable : Array, pos : int, funct
 			BaseNNET.ActivationFunctions.softmax:
 				callable[pos] = func(layer : int) -> void:
 					var sum : float = 0.0
-					var exp_values : Array = []
-					exp_values.resize(neurons_in[layer].size())
 					var i : int = 0; while i < structure[layer]:
-						exp_values[i] = pow(2.7182, neurons_in[layer][i])
-						sum += exp_values[i]
+						neurons_out[layer][i] = pow(2.7182, neurons_in[layer][i])
+						sum += neurons_out[layer][i]
 						i += 1
 					i = 0; while i < structure[layer]:
-						neurons_out[layer][i] = exp_values[i] / sum
+						neurons_out[layer][i] /= sum
 						i += 1
 				dcallable[pos] = func(layer : int) -> void:
 					layer_der.resize(structure[layer])
@@ -345,8 +351,8 @@ func get_output() -> Array:
 func use_backpropogation(learning_rate : float) -> void:
 	if learning_rate < 0: push_warning("Learning rate is negative! abs function will be automatically applied")
 	lr = absf(learning_rate)
-	signs = []
-	bias_signs = []
+	kill_resilient_propagation()
+	kill_adam()
 	algorithm = BaseNNET.Algorithm.backpropogation
 
 func use_resilient_propagation(new_update_value : float = 0.0125, new_multiplication_factor : float = 1.2, new_reduction_factor : float = 0.3, new_max_step : float = 1.0, new_min_step = 0.000001) -> void:
@@ -360,15 +366,61 @@ func use_resilient_propagation(new_update_value : float = 0.0125, new_multiplica
 	reduction_factor = absf(new_reduction_factor)
 	min_step = absf(new_min_step)
 	max_step = absf(new_max_step)
+	kill_adam()
 	init_setup_resilient_propagation()
 	allocate_weights_like_structure(signs)
 	allocate_biases_like_structure(bias_signs)
 	algorithm = BaseNNET.Algorithm.resilient_propagation
 
+func use_Adam(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, new_weight_decay : float = 0.0) -> void:
+	lr = learning_rate
+	beta1 = beta_1
+	beta2 = beta_2
+	weight_decay = new_weight_decay
+	allocate_moments()
+	kill_resilient_propagation()
+	algorithm = BaseNNET.Algorithm.adam
+
+func kill_adam() -> void:
+	moments.clear()
+	smoments.clear()
+	bias_moments.clear()
+	bias_moments.clear()
+
+func kill_resilient_propagation() -> void:
+	signs.clear()
+	bias_signs.clear()
+
+func allocate_moments() -> void:
+	allocate_weights_like_structure(moments)
+	allocate_weights_like_structure(smoments)
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < structure[i]:
+			var k : int = 0
+			while k < structure[i + 1]:
+				moments[i][j][k] = 0.0
+				smoments[i][j][k] = 0.0
+				k += 1
+			j += 1
+		i += 1
+	if bias:
+		allocate_biases_like_structure(bias_moments)
+		allocate_biases_like_structure(bias_smoments)
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				bias_moments[i][j] = 0.0
+				bias_smoments[i][j] = 0.0
+				j += 1
+			i += 1
+
 func train() -> void:
 	if algorithm == BaseNNET.Algorithm.backpropogation:
 		dropout_neurons.call()
-		run()
+		run() 
 		find_deltas()
 		correct_weights_backpropagation()
 		correct_biases_backpropagation()
@@ -380,6 +432,13 @@ func train() -> void:
 		update_signs()
 		correct_weights_resilient_propagation()
 		correct_biases_resilient_propagation()
+	elif algorithm == BaseNNET.Algorithm.adam:
+		dropout_neurons.call()
+		run()
+		find_deltas()
+		update_moments()
+		correct_weights_adam()
+		correct_biases_adam()
 	else:
 		push_error("Algorithm doesn't exist")
 
@@ -429,6 +488,18 @@ func correct_weights_resilient_propagation() -> void:
 			j += 1
 		i += 1
 
+func correct_weights_adam() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < structure[i]:
+			var k : int = 0
+			while k < structure[i + 1]:
+				weights[i][j][k] -= lr * ( (moments[i][j][k] / (1.0 - beta1)) / ( sqrt(smoments[i][j][k] / (1.0 - beta2)) + BaseNNET.apzero ) )
+				k += 1
+			j += 1
+		i += 1
+
 func correct_biases_backpropagation() -> void:
 	if bias:
 		var i : int = 0
@@ -449,6 +520,16 @@ func correct_biases_resilient_propagation() -> void:
 				j += 1
 			i += 1
 
+func correct_biases_adam() -> void:
+	if bias:
+		var i : int = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				biases[i][j] -= lr * ( (bias_moments[i][j] / (1.0 - beta1)) / ( sqrt(bias_smoments[i][j] / (1.0 - beta2)) + BaseNNET.apzero ) )
+				j += 1
+			i += 1
+
 func set_target(desired_output : Array) -> void:
 	if not is_array_valid(desired_output, structure[structure.size() - 1]):
 		if desired_output.size() == structure[structure.size() - 1]:
@@ -456,6 +537,27 @@ func set_target(desired_output : Array) -> void:
 		else:
 			push_error("The quantity of elements in the target array must match number of output neurons. ", "target array size is ", desired_output.size(), " but must be ", structure[structure.size() - 1] )
 	target = desired_output.duplicate()
+
+func update_moments() -> void:
+	var i : int = 0; while i < weights.size():
+		var j : int = 0; while j < weights[i].size():
+			var k : int = 0; while k < weights[i][j].size():
+				var delta : float = (neurons_out[i][j] * deltas[i][k] + weight_decay) * active_neurons[i][j] * active_neurons[i + 1][k]
+				moments[i][j][k] = beta1 * moments[i][j][k] + (1.0 - beta1) * delta
+				smoments[i][j][k] = beta2 * smoments[i][j][k] + (1.0 - beta2) * delta * delta
+				k += 1
+			j += 1
+		i += 1
+	if bias:
+		i = 0
+		while i < bias_signs.size():
+			var j : int = 0
+			while j < bias_signs[i].size() and active_neurons[i + 1][j]:
+				var delta : float = (deltas[i][j] * bias_consts[i] + weight_decay) * active_neurons[i + 1][j]
+				bias_moments[i][j] = beta1 * bias_moments[i][j] + (1.0 - beta1) * delta
+				bias_smoments[i][j] = beta2 * bias_smoments[i][j] + (1.0 - beta2) * delta * delta
+				j += 1
+			i += 1
 
 func fill_signs() -> void:
 	var i : int = 0
