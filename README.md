@@ -24,7 +24,7 @@ Function **new** accepts 3 parameters:
 - learning rate
 - use bias   -   use true or false to say whether you want to use biases or not.
 
-Now that you created your NN, you can keep adjusting it. Here's functions for it:
+Now that you have created your NN, you can keep adjusting it. Here's functions for it:
 - **use_backpropagation**( learning_rate )   -   makes train function use backpropagation.
 - **use_resilient_propagation**( update_value = 0.0125, multiplication_factor = 1.2, reduction_factor = 0.3, max_step = 1.0, min_step = 0.000001 )   -   makes train function use resilient propagation. This function has multiple parameters to adjust, though adjusting them all might be a little tedious, so they all have standard values.
 - **enable_dropout**( probability )   -   enables dropout, which is used to prevent NN from overfitting. Don't forget to disable dropout after training/before testing.
