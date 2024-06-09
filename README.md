@@ -42,7 +42,7 @@ Now that you have created your NN, you can keep adjusting it. Here's functions f
 	- MSE
 	- MAE
 	- BCE
-	- CCE   -   don't forget to set activation function of the last layer to softmax using Categorical Crossentropy
+	- CCE   -   don't forget to set activation function of the last layer to softmax when using Categorical Crossentropy
 	- Hinge_loss
 	- Cosine_similarity_loss
 	- LogCosh_loss 
@@ -97,4 +97,4 @@ List of useful functions and functions for testing:
 - PPONNET
 - GPUNNET*
 
-GPUNNET might be **cancelled** because I had a lot of issues trying to make NN to learn something. Furthermore, GPUNNET will not work on Android at all when running outside the editor.
+GPUNNET might be **cancelled** because I had a lot of issues trying to make NN learn something. Furthermore, GPUNNET will not work on Android at all when running outside the editor. 
