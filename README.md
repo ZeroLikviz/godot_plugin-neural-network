@@ -92,7 +92,7 @@ List of useful functions and functions for testing:
 
 ---
 
-**Planned for future:**
+**Planned for the future:**
 - PPONNET
 - GPUNNET*
 
