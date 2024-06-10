@@ -12,6 +12,9 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 
 NNET is a class, which contains logic for creating, training, saving and using neural networks. In this class all computations are CPU based.
 
+News:
+- I'm currently testing NNET class and it seems like my implementation of Adam and resilient propagation is quite bad.
+
 ##### creating neural network 
 ```GDScript
 var nn : NNET = NNET.new([1,1], 0.1, false)
