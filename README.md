@@ -8,10 +8,12 @@
 Any suggestions, ideas, improvements are welcome. If you want to share them, you can do so by submitting Github issue. I'll try my best implementing your ideas, although I don't promise anything, if I can't add them, then I won't add them. Also if you find a bug please report it.
 
 ---
-# NNET
 
-News:
+### ****News****:
 - I'm currently testing NNET class and it seems like my implementation of Adam and resilient propagation is quite bad.
+- I found what may be the root of the problem: find_deltas works only halfway, and I was working around it by calculating proper deltas on the fly, but I probably forgot to do it somewhere. My code is a bit overcomplicated, so I'm simplifying it right now.
+
+# NNET
 
 NNET is a class, which contains logic for creating, training, saving and using neural networks. In this class all computations are CPU based.
 
