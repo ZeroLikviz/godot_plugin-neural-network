@@ -12,6 +12,7 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 ### ****News****:
 - I'm currently testing NNET class and it seems like my implementation of Adam and resilient propagation is quite bad.
 - I found what may be the root of the problem: find_deltas works only halfway, and I was working around it by calculating proper deltas on the fly, but I probably forgot to do it somewhere. My code is a bit overcomplicated, so I'm simplifying it right now.
+- Now I'm rewriting NNET from scratch again, because I found out that *for* cycles are at least twice as fast as *while* cycles and I need to completely change architecture of the file so I can easily add new stuff.
 
 # NNET
 
