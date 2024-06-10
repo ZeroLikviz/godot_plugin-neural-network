@@ -13,6 +13,7 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 - I'm currently testing NNET class and it seems like my implementation of Adam and resilient propagation is quite bad.
 - I found what may be the root of the problem: find_deltas works only halfway, and I was working around it by calculating proper deltas on the fly, but I probably forgot to do it somewhere. My code is a bit overcomplicated, so I'm simplifying it right now.
 - Now I'm rewriting NNET from scratch again, because I found out that *for* loops are at least twice as fast as *while* loops, and I need to completely change architecture of the file so I can easily add new stuff.
+- An idea struck me: What if Godot pre-generates all arrays for for loops when the range gets a constant number? I changed numbers to dynamic, and now while loops work faster than for loops, so I have to remake all the loops again.
 
 # NNET
 
