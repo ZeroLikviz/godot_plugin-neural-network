@@ -14,6 +14,7 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 - I found what may be the root of the problem: find_deltas works only halfway, and I was working around it by calculating proper deltas on the fly, but I probably forgot to do it somewhere. My code is a bit overcomplicated, so I'm simplifying it right now.
 - Now I'm rewriting NNET from scratch again, because I found out that *for* loops are at least twice as fast as *while* loops, and I need to completely change architecture of the file so I can easily add new stuff.
 - An idea struck me: What if Godot pre-generates all arrays for for loops when the range gets a constant number? I changed numbers to dynamic, and now while loops work faster than for loops, so I have to remake all the loops again.
+- I rewrote NNET entirely. Now, it performs as well as if you were using Torch in Python, at least for Adam. I haven't tested gradient descent yet (and probably won't), but it seems like it works fine.
 
 # NNET
 
