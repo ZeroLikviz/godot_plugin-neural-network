@@ -15,6 +15,7 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 - Now I'm rewriting NNET from scratch again, because I found out that *for* loops are at least twice as fast as *while* loops, and I need to completely change architecture of the file so I can easily add new stuff.
 - An idea struck me: What if Godot pre-generates all arrays for for loops when the range gets a constant number? I changed numbers to dynamic, and now while loops work faster than for loops, so I have to remake all the loops again.
 - I rewrote NNET entirely. Now, it performs as well as if you were using Torch in Python, at least for Adam. I haven't tested gradient descent yet (and probably won't), but it seems like it works fine.
+- We now have resilient propagation again, but it performs virtually the same as using Torch (I tested it). I haven't uploaded updates here yet because I need to work on some compatibility issues before doing so.
 
 # NNET
 
