@@ -16,6 +16,7 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 - An idea struck me: What if Godot pre-generates all arrays for for loops when the range gets a constant number? I changed numbers to dynamic, and now while loops work faster than for loops, so I have to remake all the loops again.
 - I rewrote NNET entirely. Now, it performs as well as if you were using Torch in Python, at least for Adam. I haven't tested gradient descent yet (and probably won't), but it seems like it works fine.
 - We now have resilient propagation again, but it performs virtually the same as using Torch (I tested it). I haven't uploaded updates here yet because I need to work on some compatibility issues before doing so.
+- I recently implemented the Nesterov Accelerated Gradient (NAG) algorithm but ran into a problem. All the other algorithms I added work just like those in PyTorch and TensorFlow, but not NAG. When I tested everything on the XOR problem, PyTorch and TensorFlow's NAG always avoided local minima and reached the global minimum, unlike Rprop and Adam, which often got stuck in local minima in both their implementations and mine. My NAG, however, couldn't achieve the same results and often failed to reach the global minimum. After trying another idea, I figured out the issue: I was initializing the weights in the range of -5.0 to 5.0. Changing the range to -1.0 to 1.0 fixed the problem, and now it works perfectly.
 
 # NNET
 
