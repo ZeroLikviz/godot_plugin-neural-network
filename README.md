@@ -19,6 +19,7 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 - I recently implemented NAG algorithm but ran into a problem. All the other algorithms I added work just like those in PyTorch and TensorFlow, but not NAG. When I tested everything on the XOR problem, PyTorch and TensorFlow's NAG always avoided local minima and reached the global minimum, unlike Rprop and Adam, which often got stuck in local minima in both their implementations and mine. My NAG, however, couldn't achieve the same results and often failed to reach the global minimum. After trying another idea, I figured out the issue: I was initializing the weights in the range of -5.0 to 5.0. Changing the range to -1.0 to 1.0 fixed the problem, and now it works perfectly.
 - Nadam was just added to collection of NNET algorithms. Tested it, seems fine.
 - I added Yogi as well. The next algorithm is Adadelta; maybe I'll also add RMSprop, but I need to get my hands on PPO if I want to finish the update before June 20th.
+- I added Adadelta, it works, but doesn't perform as good as PyTorch's Adadelta. I don't know what is the reason, but I checked everything twice, and all formulas are fine, so I'm just gonna leave it like that and move on to PPO.
 
 # NNET
 
