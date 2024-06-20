@@ -20,6 +20,7 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 - Nadam was just added to collection of NNET algorithms. Tested it, seems fine.
 - I added Yogi as well. The next algorithm is Adadelta; maybe I'll also add RMSprop, but I need to get my hands on PPO if I want to finish the update before June 20th.
 - I added Adadelta, it works, but doesn't perform as good as PyTorch's Adadelta. I don't know what is the reason, but I checked everything twice, and all formulas are fine, so I'm just gonna leave it like that and move on to PPO.
+- Just got back from my shift. I'm gonna rush through code to finish the update. It's very unlikely I'll be sleeping today.
 
 # NNET
 
