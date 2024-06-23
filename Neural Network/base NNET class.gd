@@ -12,13 +12,21 @@ enum ActivationFunctions
 	ReLU,
 	mish,
 	swish,
-	softmax
+	softmax,
+	user_function
 }
 
 enum Algorithm
 {
-	backpropogation,
-	resilient_propagation
+	resilient_propagation,
+	adamW,
+	nadam,
+	NAG,
+	yogi,
+	adamax,
+	adadelta,
+	gradient_descent,
+	no_algorithm
 }
 
 enum LossFunctions
@@ -26,49 +34,140 @@ enum LossFunctions
 	MSE,
 	MAE,
 	BCE,
-	CCE, # don't forget to set activation function of the last layer to softmax when using Categorical Crossentropy
+	CCE,
 	Hinge_loss,
 	Cosine_similarity_loss,
-	LogCosh_loss
+	LogCosh_loss,
+	user_function
 }
 
-const version : String = "3.0.0"
-const saving_path : String = "res://addons/Neural Network/data/"
+const version : String = "3.1.0"
+const save_path : String = "res://addons/Neural Network/data/"
 const apzero : float = 0.000001
 
 static func old_file_to_new(path: String) -> void:
-	var file := FileAccess.open(full_path(path),FileAccess.READ)
+	var file = FileAccess.open(full_path(path), FileAccess.READ)
+	# ------------ checking for errors
 	if not file.is_open():
-		push_error("Couldn't open file: " + error_string(file.get_error())); return
-	if file.get_buffer(4).get_string_from_utf8().begins_with("NNET"):
-		print("File " + path + " was already updated")
-	file.seek(0); file.get_8(); var use_bias = file.get_8()
-	file.get_8(); var new_structure_size : int = file.get_64()
-	var new_structure : Array = []; var i : int = 0
-	while i < new_structure_size:
-		new_structure.append(file.get_64())
-		i += 1
-	var file_nn : NNET = NNET.new(new_structure, 0.1, use_bias)
-	i = 0; while i < file_nn.weights.size():
-		var j : int = 0; while j < file_nn.weights[i].size():
-			var k : int = 0; while k < file_nn.weights[i][j].size():
-				file_nn.weights[i][j][k] = file.get_double()
-				k += 1
-			j += 1
-		i += 1
-	i = 0; while i < file_nn.biases.size():
-		var j : int = 0; while j < file_nn.biases[i].size():
-			file_nn.biases[i][j] = file.get_double()
-			j += 1
-		i += 1
+		push_error("Could not open file: ", error_string(file.get_error()))
+	# ------------ preparing variables
+	var string_file : String = file.get_buffer(11).get_string_from_utf8()
+	var file_nn : NNET = NNET.new([1,1], false)
+	# ------------ reseting position in the file
+	file.seek(0)
+	# ------------ updating file
+	if string_file.begins_with("NNETB 3.0.0"):
+		file.get_line()
+		# ------------ getting necessary data
+		var new_structure : Array = []
+		new_structure.resize(file.get_16())
+		var _use_bias : bool = bool(file.get_8())
+		# ------------ getting layers
+		var i : int = 0
+		while i < new_structure.size():
+			new_structure[i] = file.get_32()
+			i += 1
+		# ------------ initialising
+		file_nn._init(new_structure, _use_bias)
+		# ------------ loading weights
+		i = 0
+		while i < file_nn.weights.size():
+			var j : int = 0
+			while j < file_nn.weights[i].size():
+				var k : int = 0
+				while k < file_nn.weights[i][j].size():
+					file_nn.weights[i][j][k] = file.get_double()
+					k += 1
+				j += 1
+			i += 1
+		if _use_bias:
+			i = 0
+			while i < file_nn.biases.size():
+				var j : int = 0
+				while j < file_nn.biases[i].size():
+					file_nn.biases[i][j] = file.get_double()
+					j += 1
+				i += 1
+		# ------------ changing file
+		file.close()
+		file_nn.save_binary(path)
+		# ------------
+	elif string_file.begins_with("NNETN 3.0.0"):
+		file.get_line()
+		# ------------ getting new structure
+		var new_structure : Array = Array(file.get_line().get_slice(" : ", 1).split(" ")).map(func(string_neurons): return string_neurons.to_int())
+		# ------------ skipping and initialising
+		file.get_line()
+		file_nn._init(new_structure, file.get_line().get_slice(" : ", 1).to_int() > 0)
+		# ------------ loading weights
+		var i : int = 0
+		while i < file_nn.weights.size():
+			var j : int = 0
+			while j < file_nn.weights[i].size():
+				var k : int = 0
+				while k < file_nn.weights[i][j].size():
+					file_nn.weights[i][j][k] = file.get_line().get_slice(" : ", 1).to_float()
+					k += 1
+				j += 1
+			i += 1
+		if file_nn.use_bias:
+			i = 0
+			while i < file_nn.biases.size():
+				var j : int = 0
+				while j < file_nn.biases[i].size():
+					file_nn.biases[i][j] = file.get_line().get_slice(" : ", 1).to_float()
+					j += 1
+				i += 1
+		# ------------ changing file
+		file.close()
+		file_nn.save_binary(path)
+		# ------------
+	else:
+		# ------------ skipping and getting data
+		file.get_8()
+		var _use_bias : bool = bool(file.get_8())
+		file.get_8()
+		var new_structure : Array = []
+		new_structure.resize(file.get_64())
+		# ------------ getting layers
+		var i : int = 0
+		while i < new_structure.size():
+			new_structure[i] = file.get_64()
+			i += 1
+		# ------------ initialising
+		file_nn._init(new_structure, _use_bias)
+		# ------------ loading weights
+		i = 0
+		while i < file_nn.weights.size():
+			var j : int = 0
+			while j < file_nn.weights[i].size():
+				var k : int = 0
+				while k < file_nn.weights[i][j].size():
+					file_nn.weights[i][j][k] = file.get_double()
+					k += 1
+				j += 1
+			i += 1
+		if _use_bias:
+			i = 0
+			while i < file_nn.biases.size():
+				var j : int = 0
+				while j < file_nn.biases[i].size():
+					file_nn.biases[i][j] = file.get_double()
+					j += 1
+				i += 1
+		# ------------ changing file
+		file.close()
+		file_nn.save_binary(path)
+		# ------------
+	# ------------ closing the file
 	file.close()
-	file_nn.save_data(path)
+	# ------------
 static func full_path(path : String) -> String:
 	create_directory.call()
 	if path.begins_with("res:")  \
 	or path.begins_with("user:") :
 		return path
-	return saving_path + path
+	return save_path + path
 static var create_directory = func() -> void:
 	if not DirAccess.dir_exists_absolute("res://addons"):
 		DirAccess.make_dir_absolute("res://addons")
@@ -78,42 +177,10 @@ static var create_directory = func() -> void:
 		DirAccess.make_dir_absolute("res://addons/Neural Network/data")
 	create_directory = func() -> void: pass
 
-func set_function(function : Variant, layer : int) : pass # sets activation function
-func set_loss_function(function : Variant) : pass
-func get_logits() : pass
-func save_data(path : String, binary : bool = true) : pass
-func load_data(path : String) : pass
-func run() : pass
-func predict(input : Array) -> Array: set_input(input); run(); return get_output()
-func train() : pass
-func is_same_structure(structure : Array) : pass
-func is_same_structure_file(path : String) : pass
-func set_input(input : Array) : pass
-func set_target(desired_output : Array) : pass
-func duplicate() : pass
-func assign(neural_network) : pass
-func get_output() : pass
-func print_output() : pass
-func print_info() : pass
-func allocate_neurons() -> void: pass
-func allocate_weights() -> void: pass
-func allocate_deltas() -> void: pass
-func allocate_biases() -> void: pass
 func is_structure_valid(new_structure : Array) -> bool:
 	var i : int = 0
 	while i < new_structure.size():
-		if not new_structure[i] is int:
+		if not new_structure[i] is int and new_structure[i] > 0:
 			return false
 		i += 1
 	return new_structure.size() >= 2
-func is_array_valid(array : Array, must_be_size : int) -> bool:
-	var i : int = 0
-	while i < array.size():
-		if not array[i] is float:
-			return false
-		i += 1
-	return array.size() == must_be_size
-
-func use_backpropogation(learning_rate : float) -> void: pass
-func use_resilient_propagation(update_value : float, mult_factor : float, reduc_fact : float, max_step : float, min_step : float) -> void: pass
-
