@@ -21,6 +21,7 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 - I added Yogi as well. The next algorithm is Adadelta; maybe I'll also add RMSprop, but I need to get my hands on PPO if I want to finish the update before June 20th.
 - I added Adadelta, it works, but doesn't perform as good as PyTorch's Adadelta. I don't know what is the reason, but I checked everything twice, and all formulas are fine, so I'm just gonna leave it like that and move on to PPO.
 - Just got back from my shift. I'm gonna rush through code to finish the update. It's very unlikely I'll be sleeping today.
+- I'm going to make new documentation (this time a good one). I just couldn't figure out how PPO works, and I don't want to make people wait much longer, so after the update, I will learn more about it. I will make another update to implement PPO when I fully understand it. For now, we just have a much better version of NNET.
 
 # NNET
 
