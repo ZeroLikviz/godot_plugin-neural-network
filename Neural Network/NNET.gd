@@ -2,6 +2,8 @@
 extends BaseNNET
 class_name NNET
 
+# liner: ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 #region Variables
 
 var aa : Array = [] # Algorithm additions (momentums for example)
@@ -661,4 +663,806 @@ func use_Adamax(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.
 	init_adam(beta_1, beta_2, weights_decay)
 	algorithm = BaseNNET.Algorithm.nadam
 
-func use_Yogi(learning_rate : float, beta_1 :
+func use_Yogi(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
+	kill_additions()
+	check_learning_rate(learning_rate)
+	init_adam(beta_1, beta_2, weights_decay)
+	algorithm = BaseNNET.Algorithm.yogi
+
+func use_Rprop(update_value : float = 0.1, eta_plus : float = 1.2, eta_minus : float = 0.5, maximum_step : float = 50.0, minimum_step = 0.000001) -> void:
+	kill_additions()
+	init_Rprop(update_value, eta_plus, eta_minus, maximum_step, minimum_step)
+	algorithm = BaseNNET.Algorithm.resilient_propagation
+
+func use_Adadelta(damping_factor : float = 0.9) -> void:
+	kill_additions()
+	init_Adadelta(damping_factor)
+	algorithm = BaseNNET.Algorithm.adadelta
+
+func use_NAG(learning_rate : float, beta : float) -> void:
+	kill_additions()
+	check_learning_rate(learning_rate)
+	init_NAG(beta)
+	algorithm = BaseNNET.Algorithm.NAG
+
+#endregion
+
+#region Update
+
+func update_momentums_adam() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				aa[Adam.m1][i][j][k] = aa[Adam.beta1] * aa[Adam.m1][i][j][k] + ( 1.0 - aa[Adam.beta1] ) * weight_deltas[i][j][k]
+				aa[Adam.m2][i][j][k] = aa[Adam.beta2] * aa[Adam.m2][i][j][k] + ( 1.0 - aa[Adam.beta2] ) * weight_deltas[i][j][k] * weight_deltas[i][j][k]
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				aa[Adam.bm1][i][j] = aa[Adam.beta1] * aa[Adam.bm1][i][j] + ( 1.0 - aa[Adam.beta1] ) * bias_deltas[i][j]
+				aa[Adam.bm2][i][j] = aa[Adam.beta2] * aa[Adam.bm2][i][j] + ( 1.0 - aa[Adam.beta2] ) * bias_deltas[i][j] * bias_deltas[i][j]
+				j += 1
+			i += 1
+
+func update_momentums_yogi() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				aa[Adam.m1][i][j][k] = aa[Adam.beta1] * aa[Adam.m1][i][j][k] + ( 1.0 - aa[Adam.beta1] ) * weight_deltas[i][j][k]
+				var gradient_sign : int = int(weight_deltas[i][j][k] * weight_deltas[i][j][k] - aa[Adam.m2][i][j][k] > 0)
+				gradient_sign = gradient_sign + (1 - gradient_sign) * -1
+				aa[Adam.m2][i][j][k] = aa[Adam.m2][i][j][k] + ( 1.0 - aa[Adam.beta2] ) * weight_deltas[i][j][k] * weight_deltas[i][j][k] * gradient_sign
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				aa[Adam.bm1][i][j] = aa[Adam.beta1] * aa[Adam.bm1][i][j] + ( 1.0 - aa[Adam.beta1] ) * bias_deltas[i][j]
+				var gradient_sign : int = int(bias_deltas[i][j] * bias_deltas[i][j] - aa[Adam.bm2][i][j] > 0)
+				gradient_sign = gradient_sign + (1 - gradient_sign) * -1
+				aa[Adam.bm2][i][j] = aa[Adam.bm2][i][j] + ( 1.0 - aa[Adam.beta2] ) * bias_deltas[i][j] * bias_deltas[i][j] * gradient_sign
+				j += 1
+			i += 1
+
+func update_momentums_adamax() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				aa[Adam.m1][i][j][k] = aa[Adam.beta1] * aa[Adam.m1][i][j][k] + ( 1.0 - aa[Adam.beta1] ) * weight_deltas[i][j][k]
+				aa[Adam.m2][i][j][k] = aa[Adam.beta2] * aa[Adam.m2][i][j][k]
+				var abs_grad : float = weight_deltas[i][j][k] * int(weight_deltas[i][j][k] >= 0) - weight_deltas[i][j][k] * int(weight_deltas[i][j][k] < 0)
+				aa[Adam.m2][i][j][k] = int(aa[Adam.m2][i][j][k] > abs_grad) * aa[Adam.m2][i][j][k] + abs_grad * int(aa[Adam.m2][i][j][k] <= abs_grad)
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				aa[Adam.bm1][i][j] = aa[Adam.beta1] * aa[Adam.bm1][i][j] + ( 1.0 - aa[Adam.beta1] ) * bias_deltas[i][j]
+				aa[Adam.bm2][i][j] = aa[Adam.beta2] * aa[Adam.bm2][i][j]
+				var abs_grad : float = bias_deltas[i][j] * int(bias_deltas[i][j] >= 0) - bias_deltas[i][j] * int(bias_deltas[i][j] < 0)
+				aa[Adam.bm2][i][j] = int(aa[Adam.bm2][i][j] > abs_grad) * aa[Adam.bm2][i][j] + abs_grad * int(aa[Adam.bm2][i][j] <= abs_grad)
+				j += 1
+			i += 1
+
+func update_deltas_Rprop() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				var same_sign : int = int(weight_deltas[i][j][k] * aa[Rprop.wg][i][j][k] > 0)
+				var sign : int = int(weight_deltas[i][j][k] > 0)
+				sign = sign + (sign - 1)
+				aa[Rprop.wg][i][j][k] = aa[Rprop.wg][i][j][k] * aa[Rprop.ep] * same_sign - (1 - same_sign) * aa[Rprop.em] * aa[Rprop.wg][i][j][k]
+				var greater : int = int(aa[Rprop.wg][i][j][k] * sign > aa[Rprop.max_step])
+				var lesser : int = int(aa[Rprop.wg][i][j][k] * sign < aa[Rprop.min_step]) 
+				aa[Rprop.wg][i][j][k] = aa[Rprop.wg][i][j][k] * (1 - greater) + aa[Rprop.max_step] * greater * sign
+				aa[Rprop.wg][i][j][k] = aa[Rprop.wg][i][j][k] * (1 - lesser) + aa[Rprop.min_step] * lesser * sign
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				var same_sign : int = int(bias_deltas[i][j] * aa[Rprop.bg][i][j] > 0)
+				var sign : int = int(bias_deltas[i][j] > 0)
+				sign = sign + (sign - 1)
+				aa[Rprop.bg][i][j] = aa[Rprop.bg][i][j] * aa[Rprop.ep] * same_sign - (1 - same_sign) * aa[Rprop.em] * aa[Rprop.bg][i][j]
+				var greater : int = int(aa[Rprop.bg][i][j] * sign > aa[Rprop.max_step])
+				var lesser : int = int(aa[Rprop.bg][i][j] * sign < aa[Rprop.min_step]) 
+				aa[Rprop.bg][i][j] = aa[Rprop.bg][i][j] * (1 - greater) + aa[Rprop.max_step] * greater * sign
+				aa[Rprop.bg][i][j] = aa[Rprop.bg][i][j] * (1 - lesser) + aa[Rprop.min_step] * lesser * sign
+				j += 1
+			i += 1
+
+func update_momentums_NAG() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				aa[NAG.momentum][i][j][k] = aa[NAG.beta] * aa[NAG.momentum][i][j][k] + lr * weight_deltas[i][j][k]
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				aa[NAG.bmomentum][i][j] = aa[NAG.beta] * aa[NAG.bmomentum][i][j] + lr * bias_deltas[i][j]
+				j += 1
+			i += 1
+
+func update_gradients_squared_Adadelta() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				aa[Adadelta.wgs][i][j][k] = aa[Adadelta.df] * aa[Adadelta.wgs][i][j][k] + (1.0 - aa[Adadelta.df]) * weight_deltas[i][j][k] * weight_deltas[i][j][k]
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				aa[Adadelta.bgs][i][j] = aa[Adadelta.df] * aa[Adadelta.bgs][i][j] + (1.0 - aa[Adadelta.df]) * bias_deltas[i][j] * bias_deltas[i][j]
+				j += 1
+			i += 1
+
+func update_deltas_squared_Adadelta() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				aa[Adadelta.wds][i][j][k] = aa[Adadelta.df] * aa[Adadelta.wds][i][j][k] + (1.0 - aa[Adadelta.df]) * aa[Adadelta.wd][i][j][k]  * aa[Adadelta.wd][i][j][k]
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				aa[Adadelta.bds][i][j] = aa[Adadelta.df] * aa[Adadelta.bds][i][j] + (1.0 - aa[Adadelta.df]) * aa[Adadelta.bd][i][j]  * aa[Adadelta.bd][i][j]
+				j += 1
+			i += 1
+
+func update_deltas_Adadelta() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				aa[Adadelta.wd][i][j][k] = -sqrt(aa[Adadelta.wds][i][j][k] + apzero) * weight_deltas[i][j][k] / sqrt(aa[Adadelta.wgs][i][j][k] + apzero)
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				aa[Adadelta.bd][i][j] = -sqrt(aa[Adadelta.bds][i][j] + apzero) * bias_deltas[i][j] / sqrt(aa[Adadelta.bgs][i][j] + apzero)
+				j += 1
+			i += 1
+
+#endregion
+
+#region Transfer
+
+func momentums_to_apply_adam() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				wapply_deltas[i][j][k] = (aa[Adam.m1][i][j][k] / (1.0 - aa[Adam.beta1])) \
+				/ (sqrt(aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2])) + BaseNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				bapply_deltas[i][j] = (aa[Adam.bm1][i][j] / (1.0 - aa[Adam.beta1])) \
+				/ (sqrt(aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2])) + BaseNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
+				j += 1
+			i += 1
+
+func momentums_to_apply_adamax() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				wapply_deltas[i][j][k] = (aa[Adam.m1][i][j][k] / (1.0 - aa[Adam.beta1])) \
+				/ (aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2]) + BaseNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				bapply_deltas[i][j] = (aa[Adam.bm1][i][j] / (1.0 - aa[Adam.beta1])) \
+				/ (aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2]) + BaseNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
+				j += 1
+			i += 1
+
+func momentums_to_apply_nadam() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				wapply_deltas[i][j][k] = ( aa[Adam.beta1] * (aa[Adam.m1][i][j][k] / (1.0 - aa[Adam.beta1])) + weight_deltas[i][j][k] )\
+				/ (sqrt(aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2])) + BaseNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				bapply_deltas[i][j] = ( aa[Adam.beta1] * (aa[Adam.bm1][i][j] / (1.0 - aa[Adam.beta1])) + bias_deltas[i][j] ) \
+				/ (sqrt(aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2])) + BaseNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
+				j += 1
+			i += 1
+
+func momentums_to_apply_NAG() -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				wapply_deltas[i][j][k] = aa[NAG.momentum][i][j][k]
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				bapply_deltas[i][j] = aa[NAG.bmomentum][i][j]
+				j += 1
+			i += 1
+
+func zero_apply_grad() -> void:
+	fill_zero3(wapply_deltas)
+	if use_bias:
+		fill_zero2(bapply_deltas)
+
+func apply_to_general() -> void:
+	add_arrays3(0.0, 1.0, weight_deltas, wapply_deltas)
+	if use_bias:
+		add_arrays2(0.0, 1.0, bias_deltas, bapply_deltas)
+
+func add_to_apply(c1 : float, c2 : float, warray : Array, barray : Array) -> void:
+	add_arrays3(c1, c2, wapply_deltas, warray)
+	if use_bias:
+		add_arrays2(c1, c2, bapply_deltas, barray)
+
+#endregion
+
+#region Algorithms
+
+func apply_gradients(c : float) -> void:
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				weights[i][j][k] -= wapply_deltas[i][j][k] * c
+				k += 1
+			j += 1
+		i += 1
+	i = 0
+	while i < biases.size():
+		var j : int = 0
+		while j < biases[i].size():
+			biases[i][j] -= bapply_deltas[i][j] * c
+			j += 1
+		i += 1
+
+func train(input_data : Array[Array], target_data : Array[Array]) -> void:
+	if algorithm == BaseNNET.Algorithm.no_algorithm:
+		push_error("Please set algorithm using use_gradient_decent(...), use_adam, use_resilient_propagation and etc.")
+		return
+	if input_data.size() == 0:
+		push_error("Provide input data")
+		return
+	if input_data.size() < batch_size:
+		push_error("Batch size is greater than number of elements in provided training data")
+		return
+	if input_data.size() != target_data.size():
+		push_error("Number of elements in input data array doesn't match number of elements in target data array")
+		return
+	match algorithm:
+		BaseNNET.Algorithm.gradient_descent:
+			zero_apply_grad()
+			var i : int = 0
+			while i < batch_size:
+				var training_set : int = randi() % input_data.size() * int(batch_size != input_data.size()) \
+				+ int(batch_size == input_data.size()) * i
+				set_input(input_data[training_set])
+				set_target(target_data[training_set])
+				propagate_forward()
+				propagate_backward()
+				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
+				i += 1
+			apply_gradients(lr)
+		BaseNNET.Algorithm.adamW:
+			zero_apply_grad()
+			var i : int = 0
+			while i < batch_size:
+				var training_set : int = randi() % input_data.size() * int(batch_size != input_data.size()) \
+				+ int(batch_size == input_data.size()) * i
+				set_input(input_data[training_set])
+				set_target(target_data[training_set])
+				propagate_forward()
+				propagate_backward()
+				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
+				i += 1
+			apply_to_general()
+			update_momentums_adam()
+			momentums_to_apply_adam()
+			apply_gradients(lr)
+		BaseNNET.Algorithm.resilient_propagation:
+			zero_apply_grad()
+			var i : int = 0
+			while i < batch_size:
+				var training_set : int = randi() % input_data.size() * int(batch_size != input_data.size()) \
+				+ int(batch_size == input_data.size()) * i
+				set_input(input_data[training_set])
+				set_target(target_data[training_set])
+				propagate_forward()
+				propagate_backward()
+				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
+				i += 1
+			apply_to_general()
+			update_deltas_Rprop()
+			add_to_apply(0.0, 1.0, aa[Rprop.wg], aa[Rprop.bg])
+			apply_gradients(1.0)
+		BaseNNET.Algorithm.NAG:
+			zero_apply_grad()
+			# ------------ changing weights
+			add_arrays3(1.0, -aa[NAG.beta], weights, aa[NAG.momentum])
+			if use_bias:
+				add_arrays2(1.0, -aa[NAG.beta], biases, aa[NAG.bmomentum])
+			# ------------
+			var i : int = 0
+			while i < batch_size:
+				var training_set : int = randi() % input_data.size() * int(batch_size != input_data.size()) \
+				+ int(batch_size == input_data.size()) * i
+				set_input(input_data[training_set])
+				set_target(target_data[training_set])
+				propagate_forward()
+				propagate_backward()
+				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
+				i += 1
+			# ------------ restoring weights
+			add_arrays3(1.0, aa[NAG.beta], weights, aa[NAG.momentum])
+			if use_bias:
+				add_arrays2(1.0, aa[NAG.beta], biases, aa[NAG.bmomentum])
+			# ------------
+			apply_to_general()
+			update_momentums_NAG()
+			momentums_to_apply_NAG()
+			apply_gradients(1.0)
+		BaseNNET.Algorithm.nadam:
+			zero_apply_grad()
+			var i : int = 0
+			while i < batch_size:
+				var training_set : int = randi() % input_data.size() * int(batch_size != input_data.size()) \
+				+ int(batch_size == input_data.size()) * i
+				set_input(input_data[training_set])
+				set_target(target_data[training_set])
+				propagate_forward()
+				propagate_backward()
+				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
+				i += 1
+			apply_to_general()
+			update_momentums_adam()
+			momentums_to_apply_nadam()
+			apply_gradients(lr)
+		BaseNNET.Algorithm.adamax:
+			zero_apply_grad()
+			var i : int = 0
+			while i < batch_size:
+				var training_set : int = randi() % input_data.size() * int(batch_size != input_data.size()) \
+				+ int(batch_size == input_data.size()) * i
+				set_input(input_data[training_set])
+				set_target(target_data[training_set])
+				propagate_forward()
+				propagate_backward()
+				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
+				i += 1
+			apply_to_general()
+			update_momentums_adamax()
+			momentums_to_apply_adamax()
+			apply_gradients(lr)
+		BaseNNET.Algorithm.yogi:
+			zero_apply_grad()
+			var i : int = 0
+			while i < batch_size:
+				var training_set : int = randi() % input_data.size() * int(batch_size != input_data.size()) \
+				+ int(batch_size == input_data.size()) * i
+				set_input(input_data[training_set])
+				set_target(target_data[training_set])
+				propagate_forward()
+				propagate_backward()
+				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
+				i += 1
+			apply_to_general()
+			update_momentums_yogi()
+			momentums_to_apply_adam()
+			apply_gradients(lr)
+		BaseNNET.Algorithm.adadelta:
+			zero_apply_grad()
+			var i : int = 0
+			while i < batch_size:
+				var training_set : int = randi() % input_data.size() * int(batch_size != input_data.size()) \
+				+ int(batch_size == input_data.size()) * i
+				set_input(input_data[training_set])
+				set_target(target_data[training_set])
+				propagate_forward()
+				propagate_backward()
+				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
+				i += 1
+			apply_to_general()
+			update_gradients_squared_Adadelta()
+			update_deltas_Adadelta()
+			# ------------ updating weights
+			add_to_apply(0.0, 1.0, aa[Adadelta.wd], aa[Adadelta.bd])
+			# ------------
+			apply_gradients(-1.0)
+			update_deltas_squared_Adadelta()
+
+#endregion
+
+#region Checker
+
+func check_learning_rate(learning_rate : float) -> void:
+	if learning_rate < 0:
+		push_error("Learning rate must be above zero")
+		return
+	lr = learning_rate
+
+#endregion
+
+#region Access
+
+func set_batch_size(new_batch_size : int) -> void:
+	if new_batch_size < 0:
+		push_error("Batch size can't be negative")
+		return
+	if new_batch_size == 0:
+		push_error("Batch size must be positive, zero isn't a positive number")
+		return
+	batch_size = new_batch_size
+
+func set_input(input : Array) -> void:
+	if input.size() != neurons_out[0].size():
+		push_error("Input size must match number of neurons on the first layer")
+		return
+	neurons_out[0] = input.duplicate()
+
+func set_target(new_target : Array) -> void:
+	if target.size() != new_target.size():
+		push_error("Target size must match number of neurons on the last layer")
+		return
+	target = new_target.duplicate()
+
+func get_output() -> Array:
+	return neurons_out[f.size() - 1].duplicate()
+
+func last_layer() -> int:
+	return structure.size() - 1
+
+func get_total_weights() -> int:
+	var weights_quantity : int = 0
+	var i : int = 0
+	while i < structure.size() - 1:
+		weights_quantity += structure[i] * structure[i + 1]
+		i += 1
+	return weights_quantity
+
+func get_total_biases() -> int:
+	var biases_quantity : int = 0
+	var i : int = 1
+	while i < structure.size():
+		biases_quantity += structure[i]
+		i += 1
+	return biases_quantity
+
+#endregion
+
+#region Data
+
+func save_binary(path : String) -> void:
+	var file = FileAccess.open(full_path(path), FileAccess.WRITE)
+	# ------------ checking for errors
+	if not file.is_open():
+		push_error("Could not open file: ", error_string(file.get_error()))
+	# ------------ saving
+	file.store_string("NNETB " + version + "\n") # NNETB 3.1.0
+	file.store_32(structure.size())
+	for layer in structure:
+		file.store_64(layer)
+	file.store_8(int(use_bias))
+	for function in fd:
+		file.store_8(function) # the last function is loss function.
+	# ------------ saving weights
+	var i : int = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				file.store_double(weights[i][j][k])
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				file.store_double(biases[i][j])
+				j += 1
+			i += 1
+	# ------------
+
+func save_nonbinary(path : String) -> void:
+	var file = FileAccess.open(full_path(path), FileAccess.WRITE)
+	# ------------ checking for errors
+	if not file.is_open():
+		push_error("Could not open file: ", error_string(file.get_error()))
+	# ------------ saving important things
+	file.store_line("NNETN " + version) # NNETB 3.1.0
+	file.store_line("structure : " + str(structure).erase(0,1).left(-1).replace(",",""))
+	# ------------ saving activation functions
+	var i : int = 0
+	while i < f.size():
+		file.store_line("function layer " + str(i) + " : " + str(fd[i]) + " (" + activation_to_string(fd[i]) + ")")
+		i += 1
+	# ------------ saving loss function
+	file.store_line("loss function : " + str(fd[f.size()]) + " (" + loss_to_string(fd[f.size()]) + ")")
+	# ------------ saving other data
+	file.store_line("weights : " + str(get_total_weights()))
+	file.store_line("biases : " + str(get_total_biases() * int(use_bias)))
+	# ------------ saving weights
+	i = 0
+	while i < weights.size():
+		var j : int = 0
+		while j < weights[i].size():
+			var k : int = 0
+			while k < weights[i][j].size():
+				file.store_line("weight : " + str(weights[i][j][k]))
+				k += 1
+			j += 1
+		i += 1
+	if use_bias:
+		i = 0
+		while i < biases.size():
+			var j : int = 0
+			while j < biases[i].size():
+				file.store_line("bias : " + str(biases[i][j]))
+				j += 1
+			i += 1
+	# ------------ closing file
+	file.close()
+	# ------------
+
+func load_data(path : String) -> void:
+	var file = FileAccess.open(full_path(path), FileAccess.READ)
+	# ------------ checking for errors
+	if not file.is_open():
+		push_error("Could not open file: ", error_string(file.get_error()))
+	var file_string : String = file.get_buffer(11).get_string_from_utf8()
+	if file_string != "NNETB 3.1.0" and file_string != "NNETN 3.1.0":
+		# ------------ updating file 
+		file.close()
+		old_file_to_new(path)
+		# ------------ loading
+		load_data(path)
+		return
+		# ------------
+	# ------------ loading file
+	if file_string == "NNETB 3.1.0":
+		# ------------ loading binary data
+		file.seek(0)
+		file.get_line()
+		var new_structure : Array = []
+		new_structure.resize(file.get_32())
+		var i : int = 0
+		while i < new_structure.size():
+			new_structure[i] = file.get_64()
+			i += 1
+		self._init(new_structure, bool(file.get_8()))
+		i = 0
+		while i < structure.size():
+			set_function(file.get_8(), i)
+			i += 1
+		set_loss_function(file.get_8())
+		# ------------ loading weights
+		i = 0
+		while i < weights.size():
+			var j : int = 0
+			while j < weights[i].size():
+				var k : int = 0
+				while k < weights[i][j].size():
+					weights[i][j][k] = file.get_double()
+					k += 1
+				j += 1
+			i += 1
+		if use_bias:
+			i = 0
+			while i < biases.size():
+				var j : int = 0
+				while j < biases[i].size():
+					biases[i][j] = file.get_double()
+					j += 1
+				i += 1
+		# ------------
+	elif file_string == "NNETN 3.1.0":
+		# ------------ loading non-binary data
+		file.seek(0)
+		file.get_buffer(12)
+		var new_structure : Array = Array(file.get_line().get_slice(" : ", 1).split(" ")).map(func(string_neurons): return string_neurons.to_int())
+		# ------------ skipping to biases
+		var i : int = 0
+		while i < new_structure.size() + 2:
+			file.get_line()
+			i += 1
+		# ------------ initialising
+		self._init(new_structure, file.get_line().get_slice(" : ", 1).to_int() > 0)
+		# ------------ returning to functions
+		file.seek(0)
+		file.get_line()
+		file.get_line()
+		i = 0
+		while i < structure.size():
+			set_function(file.get_line().get_slice(" : ", 1).get_slice(" ", 0).to_int(), i)
+			i += 1
+		set_loss_function(file.get_line().get_slice(" : ", 1).get_slice(" ", 0).to_int())
+		# ------------ skipping unnecessary data
+		file.get_line()
+		file.get_line()
+		# ------------ loading weights
+		i = 0
+		while i < weights.size():
+			var j : int = 0
+			while j < weights[i].size():
+				var k : int = 0
+				while k < weights[i][j].size():
+					weights[i][j][k] = file.get_line().get_slice(" : ", 1).to_float()
+					k += 1
+				j += 1
+			i += 1
+		if use_bias:
+			i = 0
+			while i < biases.size():
+				var j : int = 0
+				while j < biases[i].size():
+					biases[i][j] = file.get_line().get_slice(" : ", 1).to_float()
+					j += 1
+				i += 1
+		# ------------
+	# ------------ closing file
+	file.close()
+	# ------------
+
+#region Side functions
+
+func activation_to_string(activation_function : BaseNNET.ActivationFunctions) -> String:
+	match activation_function:
+		BaseNNET.ActivationFunctions.identity:
+			return "identity"
+		BaseNNET.ActivationFunctions.binary_step:
+			return "binary step"
+		BaseNNET.ActivationFunctions.logistic:
+			return "logistic"
+		BaseNNET.ActivationFunctions.tanh:
+			return "tanh"
+		BaseNNET.ActivationFunctions.ReLU:
+			return "ReLU"
+		BaseNNET.ActivationFunctions.mish:
+			return "mish"
+		BaseNNET.ActivationFunctions.swish:
+			return "swish"
+		BaseNNET.ActivationFunctions.softmax:
+			return "softmax"
+		BaseNNET.ActivationFunctions.user_function:
+			return "user function"
+	push_error("Activation function does not exist")
+	return "ERROR"
+
+func loss_to_string(loss_function : BaseNNET.LossFunctions) -> String:
+	match fd[f.size()]:
+		BaseNNET.LossFunctions.MSE:
+			return "MSE"
+		BaseNNET.LossFunctions.MAE:
+			return "MAE"
+		BaseNNET.LossFunctions.BCE:
+			return "BCE"
+		BaseNNET.LossFunctions.CCE:
+			return "CCE"
+		BaseNNET.LossFunctions.Cosine_similarity_loss:
+			return "Cosine similarity loss"
+		BaseNNET.LossFunctions.LogCosh_loss:
+			return "LogCosh loss"
+		BaseNNET.LossFunctions.Hinge_loss:
+			return "Hinge loss"
+		BaseNNET.LossFunctions.user_function:
+			return "User loss"
+	push_error("Loss function does not exist")
+	return "ERROR"
+
+func algorithm_to_string(current_algoritm : BaseNNET.Algorithm) -> String:
+	match current_algoritm:
+		BaseNNET.Algorithm.gradient_descent:
+			return "gradient descent"
+		BaseNNET.Algorithm.adamW:
+			return "Adam(W)"
+		BaseNNET.Algorithm.adamax:
+			return "Adamax"
+		BaseNNET.Algorithm.adadelta:
+			return "Adadelta"
+		BaseNNET.Algorithm.yogi:
+			return "Yogi"
+		BaseNNET.Algorithm.NAG:
+			return "NAG"
+		BaseNNET.Algorithm.nadam:
+			return "Nadam"
+		BaseNNET.Algorithm.resilient_propagation:
+			return "Rprop"
+		BaseNNET.Algorithm.no_algorithm:
+			return "No algorithm"
+	push_error("Algorithm does not exist")
+	return "ERROR"
+
+#endregion
+
+#endregion
