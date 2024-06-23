@@ -2,8 +2,6 @@
 extends BaseNNET
 class_name NNET
 
-# liner: ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 #region Variables
 
 var aa : Array = [] # Algorithm additions (momentums for example)
@@ -1215,6 +1213,22 @@ func get_total_biases() -> int:
 		biases_quantity += structure[i]
 		i += 1
 	return biases_quantity
+
+func get_loss(input_data : Array, target_data : Array) -> float:
+	if input_data.size() == 0:
+		push_error("Provide input data")
+		return -1.0
+	if input_data.size() != target_data.size():
+		push_error("Number of elements in input data array doesn't match number of elements in target data array")
+		return -1.0
+	var loss : float = 0
+	var i : int = 0
+	while i < input_data.size():
+		set_input(input_data[i])
+		propagate_forward()
+		loss += lf.call(get_output(), target_data[i])
+		i += 1
+	return loss / input_data.size()
 
 #endregion
 
