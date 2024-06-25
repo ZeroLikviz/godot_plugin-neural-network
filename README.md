@@ -140,5 +140,5 @@ func XOR_test(nn : NNET) -> void:
 ---
 
 #### Plans:
-- Try to learn PPO again, to create PPONNET or RLNNET class.
-- Try to recreate the GPUNNET class. It might be cancelled, because it's very hard to control things on the GPU, and I have no Idea how to implement so many algorithms, without creating tons of .glsl files.
+- Try to learn PPO again to create the PPONNET or RLNNET class.
+- Try to recreate the GPUNNET class. It might be cancelled, because it's quite difficult to control things on the GPU, and I have no Idea how to implement so many algorithms, without creating tons of .glsl files.
