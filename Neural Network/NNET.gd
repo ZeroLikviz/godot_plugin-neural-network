@@ -1,5 +1,5 @@
 @icon("res://addons/Neural Network/base NNET class.gd")
-extends BaseNNET
+extends BNNET
 class_name NNET
 
 #region Variables
@@ -23,7 +23,7 @@ var lr : float = 1.0 # learning rate
 var use_bias : bool
 var lf : Callable # loss function
 var dlayer : Array = []
-var algorithm : BaseNNET.Algorithm = BaseNNET.Algorithm.no_algorithm
+var algorithm : BNNET.Algorithms = BNNET.Algorithms.no_algorithm
 var batch_size : int = 1
 var fd : Array = [] #functions data
 
@@ -190,17 +190,17 @@ func set_function(function : Variant, from : int, to : int = from) -> void:
 	if to >= structure.size():
 		push_error("You exceeded number of layers by ", to - structure.size() + 1 ,".Remember: From and To are both inclusive")
 		return
-	if function is Callable or function is BaseNNET.ActivationFunctions:
+	if function is Callable or function is BNNET.ActivationFunctions:
 		var layer : int = from
 		while layer <= to:
 			specify_function(function, layer)
 			layer += 1
 	else:
-		push_error("Function must be Callable or belong to BaseNNET.ActivationFunctions")
+		push_error("Function must be Callable or belong to BNNET.ActivationFunctions")
 
 func specify_function(function : Variant, layer : int) -> void:
 	if function is Callable:
-		fd[layer] = BaseNNET.ActivationFunctions.user_function
+		fd[layer] = BNNET.ActivationFunctions.user_function
 		uf[layer] = function
 		f[layer] = func() -> void:
 			var i : int = 0
@@ -212,10 +212,11 @@ func specify_function(function : Variant, layer : int) -> void:
 			while i < neurons_in[layer].size():
 				dlayer[i] = uf[layer].call(neurons_in[layer][i] + apzero) - uf[layer].call(neurons_in[layer][i]) / apzero
 				i += 1
-	elif function is BaseNNET.ActivationFunctions:
-		fd[layer] = function
+	elif function is BNNET.ActivationFunctions:
+		if function != BNNET.ActivationFunctions.user_function:
+			fd[layer] = function
 		match function:
-			BaseNNET.ActivationFunctions.identity:
+			BNNET.ActivationFunctions.identity:
 				f[layer] = func() -> void:
 					var i : int = 0
 					while i < neurons_in[layer].size():
@@ -226,7 +227,7 @@ func specify_function(function : Variant, layer : int) -> void:
 					while i < neurons_in[layer].size():
 						dlayer[i] = 1.0
 						i += 1
-			BaseNNET.ActivationFunctions.binary_step:
+			BNNET.ActivationFunctions.binary_step:
 				f[layer] = func() -> void:
 					var i : int = 0
 					while i < neurons_in[layer].size():
@@ -237,7 +238,7 @@ func specify_function(function : Variant, layer : int) -> void:
 					while i < neurons_in[layer].size():
 						dlayer[i] = 0.0
 						i += 1
-			BaseNNET.ActivationFunctions.logistic:
+			BNNET.ActivationFunctions.logistic:
 				f[layer] = func() -> void:
 					var i : int = 0
 					while i < neurons_in[layer].size():
@@ -248,7 +249,7 @@ func specify_function(function : Variant, layer : int) -> void:
 					while i < neurons_in[layer].size():
 						dlayer[i] = neurons_out[layer][i] * ( 1.0 - neurons_out[layer][i] )
 						i += 1
-			BaseNNET.ActivationFunctions.tanh:
+			BNNET.ActivationFunctions.tanh:
 				f[layer] = func() -> void:
 					var i : int = 0
 					while i < neurons_in[layer].size():
@@ -260,7 +261,7 @@ func specify_function(function : Variant, layer : int) -> void:
 						var expx = 2.0 / (1.0 + exp(-neurons_in[layer][i])) - 1.0
 						dlayer[i] = 1.0 - expx * expx
 						i += 1
-			BaseNNET.ActivationFunctions.ReLU:
+			BNNET.ActivationFunctions.ReLU:
 				f[layer] = func() -> void:
 					var i : int = 0
 					while i < neurons_in[layer].size():
@@ -271,7 +272,7 @@ func specify_function(function : Variant, layer : int) -> void:
 					while i < neurons_in[layer].size():
 						dlayer[i] = float(neurons_in[layer][i] >= 0)
 						i += 1
-			BaseNNET.ActivationFunctions.mish:
+			BNNET.ActivationFunctions.mish:
 				f[layer] = func() -> void:
 					var i : int = 0
 					while i < neurons_in[layer].size():
@@ -287,7 +288,7 @@ func specify_function(function : Variant, layer : int) -> void:
 						divider *= divider
 						dlayer[i] = expx * ( 4 + x4 + expx * (expx * (expx + 4) + x4 + 6) ) / divider
 						i += 1
-			BaseNNET.ActivationFunctions.swish:
+			BNNET.ActivationFunctions.swish:
 				f[layer] = func() -> void:
 					var i : int = 0
 					while i < neurons_in[layer].size():
@@ -299,7 +300,7 @@ func specify_function(function : Variant, layer : int) -> void:
 						var sx : float = 1.0 / (1.0 + exp(-neurons_in[layer][i]))
 						dlayer[i] = sx + neurons_in[layer][i] * sx * (1.0 - sx)
 						i += 1
-			BaseNNET.ActivationFunctions.softmax:
+			BNNET.ActivationFunctions.softmax:
 				f[layer] = func() -> void:
 					var sum : float = 0.0
 					var i : int = 0
@@ -319,11 +320,11 @@ func specify_function(function : Variant, layer : int) -> void:
 						exp(neurons_in[layer][i] + apzero) / sum ) / apzero
 						i += 1
 	else:
-		push_error("Function must be Callable or belong to BaseNNET.ActivationFunctions")
+		push_error("Function must be Callable or belong to BNNET.ActivationFunctions")
 
 func set_loss_function(function : Variant) -> void:
 	if function is Callable:
-		fd[f.size()] = BaseNNET.LossFunctions.user_function
+		fd[f.size()] = BNNET.LossFunctions.user_function
 		lf = function
 		# ------------- test
 		var array : Array = []
@@ -333,13 +334,13 @@ func set_loss_function(function : Variant) -> void:
 		var i : int = 0
 		while i < f.size():
 			if not is_equal_approx(array[i], 1.2345):
-				push_error("It's not allowed for loss function to change output/target values. Change your function")
+				push_error("It's not allowed for loss function to change output/target values. Change your function (If your function doesn't change anything, then remove this chunk of code")
 				i += 1
 		# -------------
-	elif function is BaseNNET.LossFunctions:
+	elif function is BNNET.LossFunctions:
 		fd[f.size()] = function
 		match function:
-			BaseNNET.LossFunctions.MSE:
+			BNNET.LossFunctions.MSE:
 				lf = func(outputs, targets) -> float:
 					var sum : float = 0.0
 					var i : int = 0
@@ -348,7 +349,7 @@ func set_loss_function(function : Variant) -> void:
 						i += 1
 					sum /= outputs.size()
 					return sum
-			BaseNNET.LossFunctions.MAE:
+			BNNET.LossFunctions.MAE:
 				lf = func(outputs, targets):
 					var sum : float = 0.0
 					var i : int = 0
@@ -358,7 +359,7 @@ func set_loss_function(function : Variant) -> void:
 						i += 1
 					sum /= outputs.size()
 					return sum
-			BaseNNET.LossFunctions.BCE:
+			BNNET.LossFunctions.BCE:
 				lf = func(outputs, targets):
 					var sum : float = 0.0
 					var i : int = 0
@@ -367,7 +368,7 @@ func set_loss_function(function : Variant) -> void:
 						i += 1
 					sum /= outputs.size()
 					return -sum
-			BaseNNET.LossFunctions.CCE:
+			BNNET.LossFunctions.CCE:
 				lf = func(outputs, targets):
 					var i : int = 0
 					var sum : float = 0.0
@@ -376,7 +377,7 @@ func set_loss_function(function : Variant) -> void:
 						i += 1
 					sum /= outputs.size()
 					return -sum
-			BaseNNET.LossFunctions.Hinge_loss:
+			BNNET.LossFunctions.Hinge_loss:
 				lf = func(outputs, targets):
 					var sum : float = 0.0
 					var i : int = 0
@@ -386,7 +387,7 @@ func set_loss_function(function : Variant) -> void:
 						i += 1
 					sum /= outputs.size()
 					return sum
-			BaseNNET.LossFunctions.Cosine_similarity_loss:
+			BNNET.LossFunctions.Cosine_similarity_loss:
 				lf = func(outputs, targets):
 					var length_o : float = 0
 					var length_t : float = 0
@@ -403,7 +404,7 @@ func set_loss_function(function : Variant) -> void:
 						similarity += (outputs[i] / length_o) * (targets[i] / length_t)
 						i += 1
 					return similarity
-			BaseNNET.LossFunctions.LogCosh_loss:
+			BNNET.LossFunctions.LogCosh_loss:
 				lf = func(outputs, targets):
 					var sum : float = 0.0
 					var i : int = 0
@@ -413,7 +414,7 @@ func set_loss_function(function : Variant) -> void:
 					sum /= outputs.size()
 					return sum
 	else:
-		push_error("Function must be Callable or belong to BaseNNET.LossFunctions")
+		push_error("Function must be Callable or belong to BNNET.LossFunctions")
 
 #endregion
 
@@ -528,27 +529,27 @@ func _init(architecture : Array, use_biases : bool) -> void:
 	df.resize(structure.size())
 	uf.resize(structure.size())
 	fd.resize(structure.size() + 1)
-	set_function(BaseNNET.ActivationFunctions.logistic, 0, structure.size() - 1)
-	set_loss_function(BaseNNET.LossFunctions.MSE)
+	set_function(BNNET.ActivationFunctions.logistic, 0, structure.size() - 1)
+	set_loss_function(BNNET.LossFunctions.MSE)
 
 func reinit() -> void:
 	fill_rand3(weights)
 	if use_bias:
 		fill_rand2(biases)
 	match algorithm:
-		BaseNNET.Algorithm.adamW:
+		BNNET.Algorithms.adamW:
 			use_Adam(lr, aa[Adam.beta1], aa[Adam.beta2], aa[Adam.weight_decay])
-		BaseNNET.Algorithm.adamax:
+		BNNET.Algorithms.adamax:
 			use_Adamax(lr, aa[Adam.beta1], aa[Adam.beta2], aa[Adam.weight_decay])
-		BaseNNET.Algorithm.nadam:
+		BNNET.Algorithms.nadam:
 			use_Nadam(lr, aa[Adam.beta1], aa[Adam.beta2], aa[Adam.weight_decay])
-		BaseNNET.Algorithm.yogi:
+		BNNET.Algorithms.yogi:
 			use_Yogi(lr, aa[Adam.beta1], aa[Adam.beta2], aa[Adam.weight_decay])
-		BaseNNET.Algorithm.NAG:
+		BNNET.Algorithms.NAG:
 			use_NAG(lr, aa[NAG.beta])
-		BaseNNET.Algorithm.resilient_propagation:
+		BNNET.Algorithms.resilient_propagation:
 			use_Rprop(aa[Rprop.uv], aa[Rprop.ep], aa[Rprop.em], aa[Rprop.max_step], aa[Rprop.min_step])
-		BaseNNET.Algorithm.adadelta:
+		BNNET.Algorithms.adadelta:
 			use_Adadelta(aa[Adadelta.df])
 
 func init_adam(beta_1 : float, beta_2 : float, weights_decay : float) -> void:
@@ -643,50 +644,50 @@ func kill_additions() -> void:
 
 #region Use
 
-func use_gradient_decent(learning_rate : float) -> void:
+func use_gradient_descent(learning_rate : float) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
-	algorithm = BaseNNET.Algorithm.gradient_descent
+	algorithm = BNNET.Algorithms.gradient_descent
 
 func use_Adam(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
 	init_adam(beta_1, beta_2, weights_decay)
-	algorithm = BaseNNET.Algorithm.adamW
+	algorithm = BNNET.Algorithms.adamW
 
 func use_Nadam(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
 	init_adam(beta_1, beta_2, weights_decay)
-	algorithm = BaseNNET.Algorithm.nadam
+	algorithm = BNNET.Algorithms.nadam
 
 func use_Adamax(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
 	init_adam(beta_1, beta_2, weights_decay)
-	algorithm = BaseNNET.Algorithm.nadam
+	algorithm = BNNET.Algorithms.nadam
 
 func use_Yogi(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
 	init_adam(beta_1, beta_2, weights_decay)
-	algorithm = BaseNNET.Algorithm.yogi
+	algorithm = BNNET.Algorithms.yogi
 
 func use_Rprop(update_value : float = 0.1, eta_plus : float = 1.2, eta_minus : float = 0.5, maximum_step : float = 50.0, minimum_step = 0.000001) -> void:
 	kill_additions()
 	init_Rprop(update_value, eta_plus, eta_minus, maximum_step, minimum_step)
-	algorithm = BaseNNET.Algorithm.resilient_propagation
+	algorithm = BNNET.Algorithms.resilient_propagation
 
 func use_Adadelta(damping_factor : float = 0.9) -> void:
 	kill_additions()
 	init_Adadelta(damping_factor)
-	algorithm = BaseNNET.Algorithm.adadelta
+	algorithm = BNNET.Algorithms.adadelta
 
 func use_NAG(learning_rate : float, beta : float) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
 	init_NAG(beta)
-	algorithm = BaseNNET.Algorithm.NAG
+	algorithm = BNNET.Algorithms.NAG
 
 #endregion
 
@@ -892,7 +893,7 @@ func momentums_to_apply_adam() -> void:
 			var k : int = 0
 			while k < weights[i][j].size():
 				wapply_deltas[i][j][k] = (aa[Adam.m1][i][j][k] / (1.0 - aa[Adam.beta1])) \
-				/ (sqrt(aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2])) + BaseNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
+				/ (sqrt(aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2])) + BNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
 				k += 1
 			j += 1
 		i += 1
@@ -902,7 +903,7 @@ func momentums_to_apply_adam() -> void:
 			var j : int = 0
 			while j < biases[i].size():
 				bapply_deltas[i][j] = (aa[Adam.bm1][i][j] / (1.0 - aa[Adam.beta1])) \
-				/ (sqrt(aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2])) + BaseNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
+				/ (sqrt(aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2])) + BNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
 				j += 1
 			i += 1
 
@@ -914,7 +915,7 @@ func momentums_to_apply_adamax() -> void:
 			var k : int = 0
 			while k < weights[i][j].size():
 				wapply_deltas[i][j][k] = (aa[Adam.m1][i][j][k] / (1.0 - aa[Adam.beta1])) \
-				/ (aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2]) + BaseNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
+				/ (aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2]) + BNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
 				k += 1
 			j += 1
 		i += 1
@@ -924,7 +925,7 @@ func momentums_to_apply_adamax() -> void:
 			var j : int = 0
 			while j < biases[i].size():
 				bapply_deltas[i][j] = (aa[Adam.bm1][i][j] / (1.0 - aa[Adam.beta1])) \
-				/ (aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2]) + BaseNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
+				/ (aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2]) + BNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
 				j += 1
 			i += 1
 
@@ -936,7 +937,7 @@ func momentums_to_apply_nadam() -> void:
 			var k : int = 0
 			while k < weights[i][j].size():
 				wapply_deltas[i][j][k] = ( aa[Adam.beta1] * (aa[Adam.m1][i][j][k] / (1.0 - aa[Adam.beta1])) + weight_deltas[i][j][k] )\
-				/ (sqrt(aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2])) + BaseNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
+				/ (sqrt(aa[Adam.m2][i][j][k] / (1.0 - aa[Adam.beta2])) + BNNET.apzero) + weights[i][j][k] * aa[Adam.weight_decay]
 				k += 1
 			j += 1
 		i += 1
@@ -946,7 +947,7 @@ func momentums_to_apply_nadam() -> void:
 			var j : int = 0
 			while j < biases[i].size():
 				bapply_deltas[i][j] = ( aa[Adam.beta1] * (aa[Adam.bm1][i][j] / (1.0 - aa[Adam.beta1])) + bias_deltas[i][j] ) \
-				/ (sqrt(aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2])) + BaseNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
+				/ (sqrt(aa[Adam.bm2][i][j] / (1.0 - aa[Adam.beta2])) + BNNET.apzero) + biases[i][j] * aa[Adam.weight_decay]
 				j += 1
 			i += 1
 
@@ -1009,8 +1010,8 @@ func apply_gradients(c : float) -> void:
 		i += 1
 
 func train(input_data : Array[Array], target_data : Array[Array]) -> void:
-	if algorithm == BaseNNET.Algorithm.no_algorithm:
-		push_error("Please set algorithm using use_gradient_decent(...), use_adam, use_resilient_propagation and etc.")
+	if algorithm == BNNET.Algorithms.no_algorithm:
+		push_error("Please set algorithm using use_gradient_descent(...), use_adam, use_resilient_propagation and etc.")
 		return
 	if input_data.size() == 0:
 		push_error("Provide input data")
@@ -1022,7 +1023,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 		push_error("Number of elements in input data array doesn't match number of elements in target data array")
 		return
 	match algorithm:
-		BaseNNET.Algorithm.gradient_descent:
+		BNNET.Algorithms.gradient_descent:
 			zero_apply_grad()
 			var i : int = 0
 			while i < batch_size:
@@ -1035,7 +1036,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 				add_to_apply(1.0, 1.0 / batch_size, weight_deltas, bias_deltas)
 				i += 1
 			apply_gradients(lr)
-		BaseNNET.Algorithm.adamW:
+		BNNET.Algorithms.adamW:
 			zero_apply_grad()
 			var i : int = 0
 			while i < batch_size:
@@ -1051,7 +1052,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 			update_momentums_adam()
 			momentums_to_apply_adam()
 			apply_gradients(lr)
-		BaseNNET.Algorithm.resilient_propagation:
+		BNNET.Algorithms.resilient_propagation:
 			zero_apply_grad()
 			var i : int = 0
 			while i < batch_size:
@@ -1067,7 +1068,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 			update_deltas_Rprop()
 			add_to_apply(0.0, 1.0, aa[Rprop.wg], aa[Rprop.bg])
 			apply_gradients(1.0)
-		BaseNNET.Algorithm.NAG:
+		BNNET.Algorithms.NAG:
 			zero_apply_grad()
 			# ------------ changing weights
 			add_arrays3(1.0, -aa[NAG.beta], weights, aa[NAG.momentum])
@@ -1093,7 +1094,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 			update_momentums_NAG()
 			momentums_to_apply_NAG()
 			apply_gradients(1.0)
-		BaseNNET.Algorithm.nadam:
+		BNNET.Algorithms.nadam:
 			zero_apply_grad()
 			var i : int = 0
 			while i < batch_size:
@@ -1109,7 +1110,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 			update_momentums_adam()
 			momentums_to_apply_nadam()
 			apply_gradients(lr)
-		BaseNNET.Algorithm.adamax:
+		BNNET.Algorithms.adamax:
 			zero_apply_grad()
 			var i : int = 0
 			while i < batch_size:
@@ -1125,7 +1126,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 			update_momentums_adamax()
 			momentums_to_apply_adamax()
 			apply_gradients(lr)
-		BaseNNET.Algorithm.yogi:
+		BNNET.Algorithms.yogi:
 			zero_apply_grad()
 			var i : int = 0
 			while i < batch_size:
@@ -1141,7 +1142,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 			update_momentums_yogi()
 			momentums_to_apply_adam()
 			apply_gradients(lr)
-		BaseNNET.Algorithm.adadelta:
+		BNNET.Algorithms.adadelta:
 			zero_apply_grad()
 			var i : int = 0
 			while i < batch_size:
@@ -1266,7 +1267,7 @@ func copy_functions(nn : NNET) -> void:
 	df.resize(nn.f.size())
 	var i : int = 0
 	while i < nn.f.size():
-		if fd[i] != BaseNNET.ActivationFunctions.user_function:
+		if fd[i] != BNNET.ActivationFunctions.user_function:
 			set_function(nn.fd[i], i)
 		else:
 			set_function(nn.uf[i], i)
@@ -1454,69 +1455,69 @@ func load_data(path : String) -> void:
 
 #region Side functions
 
-func activation_to_string(activation_function : BaseNNET.ActivationFunctions) -> String:
+func activation_to_string(activation_function : BNNET.ActivationFunctions) -> String:
 	match activation_function:
-		BaseNNET.ActivationFunctions.identity:
+		BNNET.ActivationFunctions.identity:
 			return "identity"
-		BaseNNET.ActivationFunctions.binary_step:
+		BNNET.ActivationFunctions.binary_step:
 			return "binary step"
-		BaseNNET.ActivationFunctions.logistic:
+		BNNET.ActivationFunctions.logistic:
 			return "logistic"
-		BaseNNET.ActivationFunctions.tanh:
+		BNNET.ActivationFunctions.tanh:
 			return "tanh"
-		BaseNNET.ActivationFunctions.ReLU:
+		BNNET.ActivationFunctions.ReLU:
 			return "ReLU"
-		BaseNNET.ActivationFunctions.mish:
+		BNNET.ActivationFunctions.mish:
 			return "mish"
-		BaseNNET.ActivationFunctions.swish:
+		BNNET.ActivationFunctions.swish:
 			return "swish"
-		BaseNNET.ActivationFunctions.softmax:
+		BNNET.ActivationFunctions.softmax:
 			return "softmax"
-		BaseNNET.ActivationFunctions.user_function:
+		BNNET.ActivationFunctions.user_function:
 			return "user function"
 	push_error("Activation function does not exist")
 	return "ERROR"
 
-func loss_to_string(loss_function : BaseNNET.LossFunctions) -> String:
+func loss_to_string(loss_function : BNNET.LossFunctions) -> String:
 	match fd[f.size()]:
-		BaseNNET.LossFunctions.MSE:
+		BNNET.LossFunctions.MSE:
 			return "MSE"
-		BaseNNET.LossFunctions.MAE:
+		BNNET.LossFunctions.MAE:
 			return "MAE"
-		BaseNNET.LossFunctions.BCE:
+		BNNET.LossFunctions.BCE:
 			return "BCE"
-		BaseNNET.LossFunctions.CCE:
+		BNNET.LossFunctions.CCE:
 			return "CCE"
-		BaseNNET.LossFunctions.Cosine_similarity_loss:
+		BNNET.LossFunctions.Cosine_similarity_loss:
 			return "Cosine similarity loss"
-		BaseNNET.LossFunctions.LogCosh_loss:
+		BNNET.LossFunctions.LogCosh_loss:
 			return "LogCosh loss"
-		BaseNNET.LossFunctions.Hinge_loss:
+		BNNET.LossFunctions.Hinge_loss:
 			return "Hinge loss"
-		BaseNNET.LossFunctions.user_function:
+		BNNET.LossFunctions.user_function:
 			return "User loss"
 	push_error("Loss function does not exist")
 	return "ERROR"
 
-func algorithm_to_string(current_algoritm : BaseNNET.Algorithm) -> String:
+func algorithm_to_string(current_algoritm : BNNET.Algorithms) -> String:
 	match current_algoritm:
-		BaseNNET.Algorithm.gradient_descent:
+		BNNET.Algorithms.gradient_descent:
 			return "gradient descent"
-		BaseNNET.Algorithm.adamW:
+		BNNET.Algorithms.adamW:
 			return "Adam(W)"
-		BaseNNET.Algorithm.adamax:
+		BNNET.Algorithms.adamax:
 			return "Adamax"
-		BaseNNET.Algorithm.adadelta:
+		BNNET.Algorithms.adadelta:
 			return "Adadelta"
-		BaseNNET.Algorithm.yogi:
+		BNNET.Algorithms.yogi:
 			return "Yogi"
-		BaseNNET.Algorithm.NAG:
+		BNNET.Algorithms.NAG:
 			return "NAG"
-		BaseNNET.Algorithm.nadam:
+		BNNET.Algorithms.nadam:
 			return "Nadam"
-		BaseNNET.Algorithm.resilient_propagation:
+		BNNET.Algorithms.resilient_propagation:
 			return "Rprop"
-		BaseNNET.Algorithm.no_algorithm:
+		BNNET.Algorithms.no_algorithm:
 			return "No algorithm"
 	push_error("Algorithm does not exist")
 	return "ERROR"
