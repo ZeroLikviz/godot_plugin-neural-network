@@ -3,19 +3,18 @@
   <img src="https://i.postimg.cc/7689k1gx/NNET-logo.png" alt="NNET logo" />
 </div>
 
-**NNET is an add-on which provides you functionality to work with neural network.**
+**NNET is an add-on which provides you functionality to work with neural networks.**
 
 Any suggestions, ideas, improvements are welcome. If you want to share them, you can do so by submitting Github issue. Also if you find a bug please report it.
 
 ---
 # NNET
-
-NNET is a class, which contains logic for creating, training, saving and using neural networks. In this class all computations are CPU based.
+NNET is a class that contains logic for creating, training, saving, and using neural networks. In this class, all computations are CPU-based.
 
 ### functions:
    **Init:**
    - **new**( architecture : Array, use_bias : bool ) - architecture (or structure) is an array that must contain at least two positive integers, representing the number of neurons in each layer. Use_bias is a variable that decides whether to use bias neurons or not. By default all layers functions are set to logistic activation function.
-   - **reinit**( ) - initialises weights with random values, and resets algorithm's collected data, if algorithm uses it.
+   - **reinit**( ) - initialises weights with random values, and resets algorithm's collected data, if algorithm has it.
 
 **Set:**
    - **set_function**(function: Variant, layer_from: int, layer_to: int) - sets functions on layers from layer_from to layer_to, both inclusive. The first layer's index is zero; to get the last layer, use last_layer(). The function must either be Callable or belong to BNNET.ActivationFunctions (enums are in the next section, see ActivationFunctions). If the function is Callable, it must accept one parameter of type float and return a value of type float.
