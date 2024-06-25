@@ -55,7 +55,7 @@ print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]]
    - **use_Nadam**(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) - selects the Nadam algorithm as the optimisation algorithm.
    - **use_Adamax**(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) - Selects the Adamax algorithm as the optimisation algorithm
 
-> [!NOTICE]
+> [!NOTE]
 >    All variations of the Adam algorithm use weight decay as in the AdamW algorithm in my implementation
 
 **Train:**
@@ -134,7 +134,7 @@ func XOR_test(nn : NNET) -> void:
    - adadelta
    - gradient_descent
    - no_algorithm
->[!NOTICE]
+>[!NOTE]
 > You don't need this enum. It's used inside the NNET class only to remember which algorithm to use.
 
 ---
