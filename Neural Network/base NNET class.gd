@@ -1,5 +1,5 @@
 @icon("res://addons/Neural Network/base NNET class.gd")
-class_name BaseNNET
+class_name BNNET
 
 enum ActivationFunctions
 {
@@ -16,7 +16,7 @@ enum ActivationFunctions
 	user_function
 }
 
-enum Algorithm
+enum Algorithms
 {
 	resilient_propagation,
 	adamW,
