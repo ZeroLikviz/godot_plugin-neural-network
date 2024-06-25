@@ -1266,8 +1266,13 @@ func copy_functions(nn : NNET) -> void:
 	df.resize(nn.f.size())
 	var i : int = 0
 	while i < nn.f.size():
-		set_function(nn.fd[i], i)
+		if fd[i] != BaseNNET.ActivationFunctions.user_function:
+			set_function(nn.fd[i], i)
+		else:
+			set_function(nn.uf[i], i)
 		i += 1
+	fd[fd.size() - 1] = nn.fd[fd.size() - 1]
+	lf = nn.lf
 
 #endregion
 
