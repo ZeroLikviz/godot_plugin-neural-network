@@ -16,14 +16,13 @@ var bias_deltas : Array = []
 var wapply_deltas : Array = [] # buffer deltas. Deltas for updating weights
 var bapply_deltas : Array = [] # buffer deltas. Deltas for updating biases
 var target : Array = []
-var uf : Array[Callable] = []
-var f : Array[Callable] = []
-var df : Array[Callable] = []
+var uf : Array = []
+var f : Array = []
+var df : Array = []
 var lr : float = 1.0 # learning rate
 var use_bias : bool
 var lf : Callable # loss function
-var dlayer : Array[float] = []
-var get_bias : Callable
+var dlayer : Array = []
 var algorithm : BaseNNET.Algorithm = BaseNNET.Algorithm.no_algorithm
 var batch_size : int = 1
 var fd : Array = [] #functions data
@@ -166,6 +165,20 @@ func add_arrays2(c1 : float, c2 : float, array1 : Array, array2 : Array) -> void
 			neuron += 1
 		layer += 1
 
+static func deep_copy(array : Array, deep_steps : int = 16) -> Variant:
+	if deep_steps <= 0:
+		return null
+	var copy : Array = []
+	copy.resize(array.size())
+	var i : int = 0
+	while i < array.size():
+		if not array[i] is Array:
+			copy[i] = array[i]
+		else:
+			copy[i] = deep_copy(array[i], deep_steps - 1)
+		i += 1
+	return copy
+
 #endregion
 
 #region Functions
@@ -197,7 +210,7 @@ func specify_function(function : Variant, layer : int) -> void:
 		df[layer] = func() -> void:
 			var i : int = 0
 			while i < neurons_in[layer].size():
-				dlayer[i] = (uf[layer].call(neurons_in[layer][i]) - uf[layer].call(neurons_in[layer][i] + apzero)) / apzero
+				dlayer[i] = uf[layer].call(neurons_in[layer][i] + apzero) - uf[layer].call(neurons_in[layer][i]) / apzero
 				i += 1
 	elif function is BaseNNET.ActivationFunctions:
 		fd[layer] = function
@@ -464,7 +477,7 @@ func propagate_forward() -> void:
 		var neuron : int = 0
 		while neuron < structure[layer]:
 			var backward_neuron : int = 0
-			neurons_in[layer][neuron] = get_bias.call(layer - 1, neuron)
+			neurons_in[layer][neuron] = biases[layer - 1][neuron]
 			while backward_neuron < structure[layer - 1]:
 				neurons_in[layer][neuron] += neurons_out[layer - 1][backward_neuron] * weights[layer - 1][backward_neuron][neuron]
 				backward_neuron += 1
@@ -499,8 +512,9 @@ func _init(architecture : Array, use_biases : bool) -> void:
 	fill_zero3(wapply_deltas)
 	allocate3(weight_deltas)
 	fill_zero3(weight_deltas)
+	allocate2(biases, -1)
+	fill_zero2(biases)
 	if use_bias:
-		allocate2(biases, -1)
 		fill_rand2(biases)
 		allocate2(bias_deltas, -1)
 		fill_zero2(bias_deltas)
@@ -515,7 +529,6 @@ func _init(architecture : Array, use_biases : bool) -> void:
 	uf.resize(structure.size())
 	fd.resize(structure.size() + 1)
 	set_function(BaseNNET.ActivationFunctions.logistic, 0, structure.size() - 1)
-	init_callables()
 	set_loss_function(BaseNNET.LossFunctions.MSE)
 
 func reinit() -> void:
@@ -537,14 +550,6 @@ func reinit() -> void:
 			use_Rprop(aa[Rprop.uv], aa[Rprop.ep], aa[Rprop.em], aa[Rprop.max_step], aa[Rprop.min_step])
 		BaseNNET.Algorithm.adadelta:
 			use_Adadelta(aa[Adadelta.df])
-
-func init_callables() -> void:
-	if use_bias:
-		get_bias = func(layer : int, neuron : int) -> float:
-			return biases[layer][neuron]
-	else:
-		get_bias = func(_layer : int, _neuron : int) -> float:
-			return 0.0
 
 func init_adam(beta_1 : float, beta_2 : float, weights_decay : float) -> void:
 	if beta_1 > 1.0 or beta_1 < 0.0 or beta_2 > 1.0 or beta_2 < 0.0:
@@ -996,7 +1001,7 @@ func apply_gradients(c : float) -> void:
 			j += 1
 		i += 1
 	i = 0
-	while i < biases.size():
+	while i < biases.size() and use_bias:
 		var j : int = 0
 		while j < biases[i].size():
 			biases[i][j] -= bapply_deltas[i][j] * c
@@ -1212,7 +1217,7 @@ func get_total_biases() -> int:
 	while i < structure.size():
 		biases_quantity += structure[i]
 		i += 1
-	return biases_quantity
+	return biases_quantity * int(use_bias)
 
 func get_loss(input_data : Array, target_data : Array) -> float:
 	if input_data.size() == 0:
@@ -1229,6 +1234,40 @@ func get_loss(input_data : Array, target_data : Array) -> float:
 		loss += lf.call(get_output(), target_data[i])
 		i += 1
 	return loss / input_data.size()
+
+func assign(nn : NNET) -> void:
+	aa = deep_copy(nn.aa)
+	structure = deep_copy(nn.structure)
+	weights = deep_copy(nn.weights)
+	neurons_in = deep_copy(nn.neurons_in)
+	neurons_out = deep_copy(nn.neurons_out)
+	biases = deep_copy(nn.biases)
+	neuron_deltas = deep_copy(nn.neuron_deltas)
+	weight_deltas = deep_copy(nn.weight_deltas)
+	bias_deltas = deep_copy(nn.bias_deltas)
+	wapply_deltas = deep_copy(nn.wapply_deltas)
+	bapply_deltas = deep_copy(nn.bapply_deltas)
+	target = deep_copy(nn.target)
+	uf = deep_copy(nn.uf)
+	dlayer = deep_copy(nn.dlayer)
+	lr = nn.lr
+	use_bias = nn.use_bias
+	algorithm = nn.algorithm
+	batch_size = nn.batch_size
+	copy_functions(nn)
+
+func duplicate() -> NNET:
+	var nn : NNET = NNET.new([1,1], false)
+	nn.assign(self)
+	return nn
+
+func copy_functions(nn : NNET) -> void:
+	f.resize(nn.f.size())
+	df.resize(nn.f.size())
+	var i : int = 0
+	while i < nn.f.size():
+		set_function(nn.fd[i], i)
+		i += 1
 
 #endregion
 
