@@ -338,7 +338,8 @@ func set_loss_function(function : Variant) -> void:
 				i += 1
 		# -------------
 	elif function is BNNET.LossFunctions:
-		fd[f.size()] = function
+		if function != BNNET.LossFunctions.user_function:
+			fd[f.size()] = function
 		match function:
 			BNNET.LossFunctions.MSE:
 				lf = func(outputs, targets) -> float:
