@@ -1159,7 +1159,7 @@ func train(input_data : Array[Array], target_data : Array[Array]) -> void:
 			update_deltas_Adadelta()
 			# ------------ updating weights
 			add_to_apply(0.0, 1.0, aa[Adadelta.wd], aa[Adadelta.bd])
-			apply_gradients(-1.0)
+			apply_gradients(-1.0 * batch_size)
 			# ------------
 			update_deltas_squared_Adadelta()
 
