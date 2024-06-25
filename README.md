@@ -14,15 +14,16 @@ NNET is a class, which contains logic for creating, training, saving and using n
 
 ### functions:
    **Init:**
-   - **new**( architecture : Array, use_bias : bool ) - Architecture (or structure) is an array that must contain at least two elements with positive integers, representing the number of neurons in each layer. Use_bias is a variable that decides whether to use bias neurons or not. By default all layers functions are set to logistic activation function.
+   - **new**( architecture : Array, use_bias : bool ) - architecture (or structure) is an array that must contain at least two positive integers, representing the number of neurons in each layer. Use_bias is a variable that decides whether to use bias neurons or not. By default all layers functions are set to logistic activation function.
    - **reinit**( ) - initialises weights with random values, and resets algorithm's collected data, if algorithm uses it.
 
-   **Set:**
-   - **set_function**( function : Variant, layer_from : int, layers_to : int ) - sets function on layers from layer_from and to layer_to, both are inclusive, first layer's index is zero, to get the last layer use last_layer(). Function must either be Callable or belong to BNNET.ActivationFunctions (in the next section are enums, see ActivationFunctions). If the function is Callable, then it has to accept one parameter of type float and return a value of type float.
-   - **set_loss_function**( function : Variant ) - sets loss function. Function must be either Callable or belong to BNNET.LossFunctions (in the next section are enums, see LossFunctions). If the function is Callable, then it must accept two parameters: outputs and targets (predictions and ground truth or something) and return a value of type float.
+**Set:**
+   - **set_function**(function: Variant, layer_from: int, layer_to: int) - sets functions on layers from layer_from to layer_to, both inclusive. The first layer's index is zero; to get the last layer, use last_layer(). The function must either be Callable or belong to BNNET.ActivationFunctions (enums are in the next section, see ActivationFunctions). If the function is Callable, it must accept one parameter of type float and return a value of type float.
+   - **set_loss_function**(function: Variant) - sets the loss function. The function must be either callable or belong to BNNET.LossFunctions (see the next section for enums). If the function is callable, it must accept two parameters: outputs and targets (predictions and ground truth or similar) and return a float value.
    - **set_batch_size**( size : int ) - sets batch size.
-   - **set_input**( input : Array ) - sets input. If the number of elements in the input array does not match the number of neurons in the first layer, then a ln error is thrown.
+   - **set_input**( input : Array ) - sets input. If the number of elements in the input array does not match the number of neurons in the first layer, then an error is thrown.
    - **set_target**( target : Array ) - sets target. If the number of elements in the target array does not match the number of neurons in the last layer, then an error is generated.
+
 
 **Get:**
    - **get_output**( ) - returns output.
@@ -36,7 +37,7 @@ print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]]
 
 **General:**
    - **duplicate**( ) - return a copy of neural network.
-   - **assign**( nn : NNET ) - assigns the values and parameters of the neural network nn to the current network. Doesn't make data shared.
+   - **assign**( nn : NNET ) - assigns the values and parameters of the provided neural network to the current neural network. Doesn't make data shared.
    - **last_layer**( ) - returns the last layer's index.
    - **propagate_forward**( ) - performs the forward propagation, computing outputs.
 
@@ -64,7 +65,7 @@ print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]]
 ##### Code example of using NNET to solve XOR:
 ```GDScript
 func _ready() -> void:
-	var nn : NNET = NNET.new([2,4,5,1], false)
+	var nn : NNET = NNET.new([2,5,6,1], false)
 	nn.set_loss_function(BNNET.LossFunctions.MSE)
 	nn.use_Rprop(0.3)
 	#nn.use_gradient_decent(1.0)
@@ -106,13 +107,13 @@ func XOR_test(nn : NNET) -> void:
 **ActivationFunctions:**
    - identity
    - binary_step
-   - logistic / sigmoid / soft_step - by default all layers functions are set to logistic activation function.
+   - logistic / sigmoid / soft_step - by default all layers functions are set to the logistic activation function.
    - tanh
    - ReLU
    - mish
    - swish
    - softmax
-   - user_function - setting layer's function to BNNET.ActivationFunctions.user_function doesn't do anything.
+   - user_function - setting layer's function to the BNNET.ActivationFunctions.user_function doesn't do anything.
 
 **LossFunctions:**
    - MSE
