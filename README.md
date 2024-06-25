@@ -13,18 +13,18 @@ Any suggestions, ideas, improvements are welcome. If you want to share them, you
 NNET is a class, which contains logic for creating, training, saving and using neural networks. In this class all computations are CPU based.
 
 ### functions:
-   **==Init:==**
+   **Init:**
    - **new**( architecture : Array, use_bias : bool ) - Architecture (or structure) is an array that must contain at least two elements with positive integers, representing the number of neurons in each layer. Use_bias is a variable that decides whether to use bias neurons or not. By default all layers functions are set to logistic activation function.
    - **reinit**( ) - initialises weights with random values, and resets algorithm's collected data, if algorithm uses it.
 
-   **==Set:==**
+   **Set:**
    - **set_function**( function : Variant, layer_from : int, layers_to : int ) - sets function on layers from layer_from and to layer_to, both are inclusive, first layer's index is zero, to get the last layer use last_layer(). Function must either be Callable or belong to BNNET.ActivationFunctions (in the next section are enums, see ActivationFunctions). If the function is Callable, then it has to accept one parameter of type float and return a value of type float.
    - **set_loss_function**( function : Variant ) - sets loss function. Function must be either Callable or belong to BNNET.LossFunctions (in the next section are enums, see LossFunctions). If the function is Callable, then it must accept two parameters: outputs and targets (predictions and ground truth or something) and return a value of type float.
    - **set_batch_size**( size : int ) - sets batch size.
    - **set_input**( input : Array ) - sets input. If the number of elements in the input array does not match the number of neurons in the first layer, then a ln error is thrown.
    - **set_target**( target : Array ) - sets target. If the number of elements in the target array does not match the number of neurons in the last layer, then an error is generated.
 
-**==Get:==**
+**Get:**
    - **get_output**( ) - returns output.
    - **get_total_weights**( ) - returns number of weights (not including biases).
    - **get_total_biases**() - return number of biases.
@@ -34,18 +34,18 @@ print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]]
                             [[0],   [1],   [1]    [0]]))
 ```
 
-**==General:==**
+**General:**
    - **duplicate**( ) - return a copy of neural network.
    - **assign**( nn : NNET ) - assigns the values and parameters of the neural network nn to the current network. Doesn't make data shared.
    - **last_layer**( ) - returns the last layer's index.
    - **propagate_forward**( ) - performs the forward propagation, computing outputs.
 
-**==Data:==**
+**Data:**
    - **save_binary**( path : String ) - saves structure, weights, and functions (except for user-made ones) in binary form. The path can either be a file name or a full path.
    - **save_nonbinary**( path : String ) - saves structure, weights, and functions (except for user-made ones) in a non-binary form. The path can either be a file name or a full path.
    - **load_data**( path : String ) - loads data to neural network. All save files above version 2.0.0 are accepted, though I recommend to make a copy of your save files, just in case.
 
-**==Use:==**
+**Use:**
    - **use_gradient_descent**( lr : float ) - selects the gradient descent algorithm as the optimisation algorithm.
    - **use_Rprop**( update_value : float = 0.1, eta_plus : float = 1.2, eta_minus : float = 0.5, maximum_step : float = 50.0, minimum_step = 0.000001 ) - selects the Rprop algorithm as the optimisation algorithm.
    - **use_Adam**( lr : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0 ) - selects the Adam algorithm as the optimisation algorithm. It actually uses AdamW, but if weights decay equals to zero, they are the same.
@@ -58,7 +58,7 @@ print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]]
 > [!NOTICE]
 >    All variations of the Adam algorithm use weight decay as in the AdamW algorithm in my implementation
 
-**==Train:==**
+**Train:**
    - **train**( input_data : Array\[Array], target_data : Array\[Array] ) - optimises weights of the neural network using choosed algorithm. If the batch size is greater than number of elements in input/output data array, then an error is generated.
 
 ##### Code example of using NNET to solve XOR:
@@ -103,7 +103,7 @@ func XOR_test(nn : NNET) -> void:
 
 ### Enums
 
-**==ActivationFunctions:==**
+**ActivationFunctions:**
    - identity
    - binary_step
    - logistic / sigmoid / soft_step - by default all layers functions are set to logistic activation function.
@@ -114,7 +114,7 @@ func XOR_test(nn : NNET) -> void:
    - softmax
    - user_function - setting layer's function to BNNET.ActivationFunctions.user_function doesn't do anything.
 
-**==LossFunctions:==**
+**LossFunctions:**
    - MSE
    - MAE
    - BCE
@@ -124,7 +124,7 @@ func XOR_test(nn : NNET) -> void:
    - LogCosh_loss
    - user_function
 
-**==Algorithms:==**
+**Algorithms:**
    - resilient_propagation
    - adamW
    - nadam
