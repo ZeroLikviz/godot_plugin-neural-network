@@ -43,7 +43,7 @@ print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]]
 **Data:**
    - **save_binary**( path : String ) - saves structure, weights, and functions (except for user-made ones) in binary form. The path can either be a file name or a full path.
    - **save_nonbinary**( path : String ) - saves structure, weights, and functions (except for user-made ones) in a non-binary form. The path can either be a file name or a full path.
-   - **load_data**( path : String ) - loads data to neural network. All save files above version 2.0.0 are accepted, though I recommend to make a copy of your save files, just in case.
+   - **load_data**( path : String ) - loads data to the neural network. All save files above version 2.0.0 can be used, though I recommend to make a copy of your save files, just in case.
 
 **Use:**
    - **use_gradient_descent**( lr : float ) - selects the gradient descent algorithm as the optimisation algorithm.
@@ -115,7 +115,7 @@ func XOR_test(nn : NNET) -> void:
    - user_function - setting layer's function to the BNNET.ActivationFunctions.user_function doesn't do anything.
 
 **LossFunctions:**
-   - MSE
+   - MSE - used by default
    - MAE
    - BCE
    - CCE - by cross entropy, usually categorical cross entropy is meant.
