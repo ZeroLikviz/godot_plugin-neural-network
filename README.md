@@ -67,7 +67,7 @@ func _ready() -> void:
 	var nn : NNET = NNET.new([2,5,6,1], false)
 	nn.set_loss_function(BNNET.LossFunctions.MSE)
 	nn.use_Rprop(0.3)
-	#nn.use_gradient_decent(1.0)
+	#nn.use_gradient_descent(1.0)
 	#nn.use_Adam(0.1)
 	#nn.use_NAG(1.0,0.9)
 	#nn.use_Nadam(0.1)
