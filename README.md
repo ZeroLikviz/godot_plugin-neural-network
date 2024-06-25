@@ -106,7 +106,7 @@ func XOR_test(nn : NNET) -> void:
 **ActivationFunctions:**
    - identity
    - binary_step
-   - logistic / sigmoid / soft_step - by default all layers functions are set to the logistic activation function.
+   - logistic / sigmoid / soft_step - by default, all layer functions are set to the logistic activation function.
    - tanh
    - ReLU
    - mish
@@ -118,7 +118,7 @@ func XOR_test(nn : NNET) -> void:
    - MSE
    - MAE
    - BCE
-   - CCE - by cross entropy, usually categorial cross entropy is meant.
+   - CCE - by cross entropy, usually categorical cross entropy is meant.
    - Hinge_loss
    - Cosine_similarity_loss
    - LogCosh_loss
