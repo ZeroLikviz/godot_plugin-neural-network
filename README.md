@@ -13,7 +13,7 @@ NNET is a class that contains logic for creating, training, saving, and using ne
 
 ### functions:
    **Init:**
-   - **new**( architecture : Array, use_bias : bool ) - architecture (or structure) is an array that must contain at least two positive integers, representing the number of neurons in each layer. Use_bias is a variable that decides whether to use bias neurons or not. By default all layers functions are set to logistic activation function.
+   - **new**( architecture : Array, use_bias : bool ) - architecture (or structure) is an array that must contain at least two positive integers, representing the number of neurons in each layer. Use_bias is a variable that decides whether to use bias neurons or not. By default all layers functions are set to the logistic activation function.
    - **reinit**( ) - initialises weights with random values, and resets algorithm's collected data, if algorithm has it.
 
 **Set:**
@@ -27,7 +27,7 @@ NNET is a class that contains logic for creating, training, saving, and using ne
 **Get:**
    - **get_output**( ) - returns output.
    - **get_total_weights**( ) - returns number of weights (not including biases).
-   - **get_total_biases**() - return number of biases.
+   - **get_total_biases**() - returns number of biases.
    - **get_loss**( input_data : Array\[Array], target_data : Array\[Array] ) - returns loss for provided data. XOR example:
 ```GDScript
 print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]] 
@@ -35,7 +35,7 @@ print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]]
 ```
 
 **General:**
-   - **duplicate**( ) - return a copy of neural network.
+   - **duplicate**( ) - returns a copy of neural network.
    - **assign**( nn : NNET ) - assigns the values and parameters of the provided neural network to the current neural network. Doesn't make data shared.
    - **last_layer**( ) - returns the last layer's index.
    - **propagate_forward**( ) - performs the forward propagation, computing outputs.
@@ -59,7 +59,7 @@ print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]]
 >    All variations of the Adam algorithm use weight decay as in the AdamW algorithm in my implementation
 
 **Train:**
-   - **train**( input_data : Array\[Array], target_data : Array\[Array] ) - optimises weights of the neural network using choosed algorithm. If the batch size is greater than number of elements in input/output data array, then an error is generated.
+   - **train**( input_data : Array\[Array], target_data : Array\[Array] ) - optimises weights of the neural network using choosed algorithm. If the batch size is greater than number of elements in the input/output data array, then an error is generated.
 
 ##### Code example of using NNET to solve XOR:
 ```GDScript
