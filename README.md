@@ -30,7 +30,7 @@ NNET is a class that contains logic for creating, training, saving, and using ne
    - **get_total_biases**() - returns number of biases.
    - **get_loss**( input_data : Array\[Array], target_data : Array\[Array] ) - returns loss for provided data. XOR example:
 ```GDScript
-print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]] 
+print("loss: ", nn.get_loss([[0,0], [0,1], [1,0], [1,1]],
                             [[0],   [1],   [1]    [0]]))
 ```
 
