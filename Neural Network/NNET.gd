@@ -4,6 +4,7 @@ class_name NNET
 
 #region Variables
 
+var fa : Array = [] # Function Additions
 var aa : Array = [] # Algorithm additions (momentums for example)
 var structure : Array = []
 var weights : Array = []
@@ -74,6 +75,16 @@ enum Adadelta
 #endregion
 
 #region Arrays
+
+func repeat(array : Array, count : int) -> Array:
+	var new_array : Array = []
+	var size : int = array.size() * count
+	new_array.resize(size)
+	var i : int = 0
+	while i < size:
+		new_array[i] = array[i % array.size()]
+		i += 1
+	return new_array
 
 func allocate3(array : Array) -> void:
 	array.resize(structure.size() - 1)
@@ -165,8 +176,8 @@ func add_arrays2(c1 : float, c2 : float, array1 : Array, array2 : Array) -> void
 			neuron += 1
 		layer += 1
 
-static func deep_copy(array : Array, deep_steps : int = 16) -> Variant:
-	if deep_steps <= 0:
+static func deep_copy(array : Array, max_depth : int = 16) -> Variant:
+	if max_depth < 0:
 		return null
 	var copy : Array = []
 	copy.resize(array.size())
@@ -175,7 +186,7 @@ static func deep_copy(array : Array, deep_steps : int = 16) -> Variant:
 		if not array[i] is Array:
 			copy[i] = array[i]
 		else:
-			copy[i] = deep_copy(array[i], deep_steps - 1)
+			copy[i] = deep_copy(array[i], max_depth - 1)
 		i += 1
 	return copy
 
@@ -205,12 +216,12 @@ func specify_function(function : Variant, layer : int) -> void:
 		f[layer] = func() -> void:
 			var i : int = 0
 			while i < neurons_in[layer].size():
-				neurons_in[layer][i] = uf[layer].call(neurons_in[layer][i])
+				neurons_out[layer][i] = uf[layer].call(neurons_in[layer][i])
 				i += 1
 		df[layer] = func() -> void:
 			var i : int = 0
 			while i < neurons_in[layer].size():
-				dlayer[i] = uf[layer].call(neurons_in[layer][i] + apzero) - uf[layer].call(neurons_in[layer][i]) / apzero
+				dlayer[i] = (uf[layer].call(neurons_in[layer][i] + apzero) - uf[layer].call(neurons_in[layer][i])) / apzero
 				i += 1
 	elif function is BNNET.ActivationFunctions:
 		if function != BNNET.ActivationFunctions.user_function:
@@ -322,7 +333,7 @@ func specify_function(function : Variant, layer : int) -> void:
 	else:
 		push_error("Function must be Callable or belong to BNNET.ActivationFunctions")
 
-func set_loss_function(function : Variant) -> void:
+func set_loss_function(function : Variant, parameters : Array = []) -> void:
 	if function is Callable:
 		fd[f.size()] = BNNET.LossFunctions.user_function
 		lf = function
@@ -338,6 +349,7 @@ func set_loss_function(function : Variant) -> void:
 				i += 1
 		# -------------
 	elif function is BNNET.LossFunctions:
+		fa[f.size()] = []
 		if function != BNNET.LossFunctions.user_function:
 			fd[f.size()] = function
 		match function:
@@ -413,6 +425,30 @@ func set_loss_function(function : Variant) -> void:
 						sum += log(cosh(outputs[i] - targets[i]))
 						i += 1
 					sum /= outputs.size()
+					return sum
+			BNNET.LossFunctions.Huber_loss:
+				fa[f.size()] = parameters
+				lf = func(outputs, targets):
+					var i : int = 0
+					var length : float = 0
+					while i < outputs.size():
+						length += (targets[i] - outputs[i]) * (targets[i] - outputs[i])
+						i += 1
+					i = 0
+					var sum : float = 0.0
+					if length <= fa[f.size()][0] * fa[f.size()][0]:
+						while i < outputs.size():
+							sum += (outputs[i] - targets[i]) * (outputs[i] - targets[i])
+							i += 1
+						sum /= outputs.size() * 2
+					else:
+						while i < outputs.size():
+							var abs_dif : float = outputs[i] - targets[i]
+							abs_dif = int(abs_dif > 0) * abs_dif + int(abs_dif < 0) * -abs_dif
+							abs_dif = fa[f.size()][0] * (abs_dif - fa[f.size()][0] / 2)
+							sum += abs_dif
+							i += 1
+						sum /= outputs.size()
 					return sum
 	else:
 		push_error("Function must be Callable or belong to BNNET.LossFunctions")
@@ -500,7 +536,7 @@ func _init(architecture : Array, use_biases : bool) -> void:
 	if not is_structure_valid(architecture):
 		push_error("Architecture must contain only positive integers and have at least 2 layers!")
 		return
-	structure = architecture
+	structure = architecture.duplicate()
 	use_bias = use_biases
 	target.resize(structure[structure.size() - 1])
 	target.fill(0.0)
@@ -529,6 +565,7 @@ func _init(architecture : Array, use_biases : bool) -> void:
 	f.resize(structure.size())
 	df.resize(structure.size())
 	uf.resize(structure.size())
+	fa.resize(structure.size() + 1)
 	fd.resize(structure.size() + 1)
 	set_function(BNNET.ActivationFunctions.logistic, 0, structure.size() - 1)
 	set_loss_function(BNNET.LossFunctions.MSE)
@@ -538,6 +575,8 @@ func reinit() -> void:
 	if use_bias:
 		fill_rand2(biases)
 	match algorithm:
+		BNNET.Algorithms.gradient_descent:
+			use_gradient_descent(lr)
 		BNNET.Algorithms.adamW:
 			use_Adam(lr, aa[Adam.beta1], aa[Adam.beta2], aa[Adam.weight_decay])
 		BNNET.Algorithms.adamax:
@@ -553,15 +592,15 @@ func reinit() -> void:
 		BNNET.Algorithms.adadelta:
 			use_Adadelta(aa[Adadelta.df])
 
-func init_adam(beta_1 : float, beta_2 : float, weights_decay : float) -> void:
+func init_adam(beta_1 : float, beta_2 : float, weight_decay : float) -> void:
 	if beta_1 > 1.0 or beta_1 < 0.0 or beta_2 > 1.0 or beta_2 < 0.0:
 		push_error("Parameter beta must be in range from 0.0 to 1.0")
-	if weights_decay < 0:
+	if weight_decay < 0:
 		push_error("Weight decay must not be negative number")
 	aa.resize(7)
 	aa[Adam.beta1] = beta_1
 	aa[Adam.beta2] = beta_2
-	aa[Adam.weight_decay] = weights_decay
+	aa[Adam.weight_decay] = weight_decay
 	aa[Adam.m1] = []
 	aa[Adam.m2] = []
 	aa[Adam.bm1] = []
@@ -650,28 +689,28 @@ func use_gradient_descent(learning_rate : float) -> void:
 	check_learning_rate(learning_rate)
 	algorithm = BNNET.Algorithms.gradient_descent
 
-func use_Adam(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
+func use_Adam(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weight_decay : float = 0.0) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
-	init_adam(beta_1, beta_2, weights_decay)
+	init_adam(beta_1, beta_2, weight_decay)
 	algorithm = BNNET.Algorithms.adamW
 
-func use_Nadam(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
+func use_Nadam(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weight_decay : float = 0.0) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
-	init_adam(beta_1, beta_2, weights_decay)
+	init_adam(beta_1, beta_2, weight_decay)
 	algorithm = BNNET.Algorithms.nadam
 
-func use_Adamax(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
+func use_Adamax(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weight_decay : float = 0.0) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
-	init_adam(beta_1, beta_2, weights_decay)
+	init_adam(beta_1, beta_2, weight_decay)
 	algorithm = BNNET.Algorithms.nadam
 
-func use_Yogi(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weights_decay : float = 0.0) -> void:
+func use_Yogi(learning_rate : float, beta_1 : float = 0.9, beta_2 : float = 0.999, weight_decay : float = 0.0) -> void:
 	kill_additions()
 	check_learning_rate(learning_rate)
-	init_adam(beta_1, beta_2, weights_decay)
+	init_adam(beta_1, beta_2, weight_decay)
 	algorithm = BNNET.Algorithms.yogi
 
 func use_Rprop(update_value : float = 0.1, eta_plus : float = 1.2, eta_minus : float = 0.5, maximum_step : float = 50.0, minimum_step = 0.000001) -> void:
@@ -1010,19 +1049,12 @@ func apply_gradients(c : float) -> void:
 			j += 1
 		i += 1
 
-func train(input_data : Array[Array], target_data : Array[Array]) -> void:
+# update mask: "y" or "n". "y" for update, "n" for no changes
+func train(input_data : Array, target_data : Array) -> void:
 	if algorithm == BNNET.Algorithms.no_algorithm:
 		push_error("Please set algorithm using use_gradient_descent(...), use_adam, use_resilient_propagation and etc.")
 		return
-	if input_data.size() == 0:
-		push_error("Provide input data")
-		return
-	if input_data.size() < batch_size:
-		push_error("Batch size is greater than number of elements in provided training data")
-		return
-	if input_data.size() != target_data.size():
-		push_error("Number of elements in input data array doesn't match number of elements in target data array")
-		return
+	check_data(input_data, target_data)
 	match algorithm:
 		BNNET.Algorithms.gradient_descent:
 			zero_apply_grad()
@@ -1174,6 +1206,26 @@ func check_learning_rate(learning_rate : float) -> void:
 		return
 	lr = learning_rate
 
+func check_data(input_data : Array, target_data : Array) -> void:
+	if input_data.size() == 0:
+		push_error("Provide input data")
+		return
+	if input_data.size() < batch_size:
+		push_error("Batch size is greater than number of elements in provided training data")
+		return
+	if input_data.size() != target_data.size():
+		push_error("Number of elements in input data array doesn't match number of elements in target data array")
+		return
+	var i : int = 0
+	while i < input_data.size():
+		if not input_data[i] is Array:
+			push_error("All elements of input data must be arrays that contain input data")
+			return
+		if not target_data[i] is Array:
+			push_error("All elements of target data must be arrays that contain input data")
+			return
+		i += 1
+
 #endregion
 
 #region Access
@@ -1238,20 +1290,21 @@ func get_loss(input_data : Array, target_data : Array) -> float:
 	return loss / input_data.size()
 
 func assign(nn : NNET) -> void:
-	aa = deep_copy(nn.aa)
-	structure = deep_copy(nn.structure)
-	weights = deep_copy(nn.weights)
-	neurons_in = deep_copy(nn.neurons_in)
-	neurons_out = deep_copy(nn.neurons_out)
-	biases = deep_copy(nn.biases)
-	neuron_deltas = deep_copy(nn.neuron_deltas)
-	weight_deltas = deep_copy(nn.weight_deltas)
-	bias_deltas = deep_copy(nn.bias_deltas)
-	wapply_deltas = deep_copy(nn.wapply_deltas)
-	bapply_deltas = deep_copy(nn.bapply_deltas)
-	target = deep_copy(nn.target)
-	uf = deep_copy(nn.uf)
-	dlayer = deep_copy(nn.dlayer)
+	aa.assign(deep_copy(nn.aa))
+	structure.assign(deep_copy(nn.structure))
+	weights.assign(deep_copy(nn.weights))
+	neurons_in.assign(deep_copy(nn.neurons_in))
+	neurons_out.assign(deep_copy(nn.neurons_out))
+	biases.assign(deep_copy(nn.biases))
+	neuron_deltas.assign(deep_copy(nn.neuron_deltas))
+	weight_deltas.assign(deep_copy(nn.weight_deltas))
+	bias_deltas.assign(deep_copy(nn.bias_deltas))
+	wapply_deltas.assign(deep_copy(nn.wapply_deltas))
+	bapply_deltas.assign(deep_copy(nn.bapply_deltas))
+	target.assign(deep_copy(nn.target))
+	fa.assign(deep_copy(nn.fa))
+	uf.assign(deep_copy(nn.uf))
+	dlayer.assign(deep_copy(nn.dlayer))
 	lr = nn.lr
 	use_bias = nn.use_bias
 	algorithm = nn.algorithm
@@ -1266,9 +1319,11 @@ func duplicate() -> NNET:
 func copy_functions(nn : NNET) -> void:
 	f.resize(nn.f.size())
 	df.resize(nn.f.size())
+	fd.resize(nn.fd.size())
 	var i : int = 0
 	while i < nn.f.size():
-		if fd[i] != BNNET.ActivationFunctions.user_function:
+		fd[i] = nn.fd[i]
+		if nn.fd[i] != BNNET.ActivationFunctions.user_function:
 			set_function(nn.fd[i], i)
 		else:
 			set_function(nn.uf[i], i)
