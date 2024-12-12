@@ -38,6 +38,7 @@ enum LossFunctions
 	Hinge_loss,
 	Cosine_similarity_loss,
 	LogCosh_loss,
+	Huber_loss,
 	user_function
 }
 
@@ -184,3 +185,4 @@ func is_structure_valid(new_structure : Array) -> bool:
 			return false
 		i += 1
 	return new_structure.size() >= 2
+
