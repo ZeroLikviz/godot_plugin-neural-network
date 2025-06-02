@@ -4,7 +4,7 @@ class_name NetworkCPU
 # Array of LayerCPU instances representing the network's layers.
 var layers: Array[LayerCPU] = []
 # Callable function to compute the loss between predicted and target outputs.
-var loss_function: Callable
+var loss_function: ExpressionFunction
 
 # --- Initialization ---
 
@@ -112,22 +112,8 @@ func remove_layer(index: int) -> void:
 
 # Sets the loss function for the network.
 # @param loss_func Loss function as a Callable or GDScript string.
-func set_loss_function(loss_func: Variant) -> void:
-	if loss_func is Callable:
-		loss_function = loss_func
-	elif loss_func is String:
-		loss_function = _create_callable(loss_func)
-	else:
-		push_error("Invalid loss function type. Expected Callable or String.")
-
-# Creates a Callable from a GDScript expression string for the loss function.
-# @param expr GDScript string defining the loss function (e.g., "pow(predicted[i] - target[i], 2)").
-# @return A Callable representing the loss function.
-func _create_callable(expr: String) -> Callable:
-	var gd_script := GDScript.new()
-	gd_script.source_code = "func _loss_func(predicted: Array, target: Array) -> float: " + expr
-	gd_script.reload()
-	return gd_script._loss_func
+func set_loss_function(loss_func: String) -> void:
+	loss_function = ExpressionFunction.new("func(predicted: Array, target: Array) -> float:\n", loss_func)
 
 # Sets the activation function for a specific layer.
 # @param layer_idx Index of the layer to configure.
@@ -201,9 +187,9 @@ func backpropagate(target: Array) -> void:
 	var derivative_idx: int = layers[-1].neuron_data_indices["gradient"]
 	for i in range(layers[-1].neuron_activations.size()):
 		var original_value: float = layers[-1].neuron_activations[i]
-		var standard_loss: float = loss_function.call(layers[-1].neuron_activations, target)
+		var standard_loss: float = loss_function.callable.call(layers[-1].neuron_activations, target)
 		layers[-1].neuron_activations[i] += NetworkConstants.EPS
-		var changed_loss: float = loss_function.call(layers[-1].neuron_activations, target)
+		var changed_loss: float = loss_function.callable.call(layers[-1].neuron_activations, target)
 		layers[-1].neuron_data[derivative_idx][i] = (changed_loss - standard_loss) / NetworkConstants.EPS
 		layers[-1].neuron_activations[i] = original_value
 	
@@ -307,29 +293,10 @@ func compute_loss(inputs: Array, targets: Array) -> float:
 	
 	var total_loss: float = 0.0
 	for i in range(inputs.size()):
-		total_loss += loss_function.call(forward(inputs[i]), targets[i])
+		total_loss += loss_function.callable.call(forward(inputs[i]), targets[i])
 	return total_loss / inputs.size()
 
 # --- Model Persistence ---
-
-# Saves the network's configuration, weights, biases, and optimizer details to a file.
-# @param path File path to save the model.
-func save_model(path: String) -> void:
-	var file := FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		push_error("Failed to open file for writing: %s" % path)
-		return
-	
-	var model_data: Dictionary = {
-		"layer_sizes": layers.map(func(layer): return layer.neuron_activations.size()),
-		"biases_enabled": layers.map(func(layer): return bool(layer.biases.size())),
-		"weights": layers.map(func(layer): return layer.weights),
-		"biases": layers.map(func(layer): return layer.biases),
-		"optimizers": layers.map(func(layer): return layer.optimizer.get_class_name()),
-		"optimizer_hyperparameters": layers.map(func(layer): return layer.optimizer.get_hyperparameters())
-	}
-	file.store_string(JSON.stringify(model_data))
-	file.close()
 
 static func placeholder() -> NetworkCPU:
 	var network : NetworkCPU = NetworkCPU.new([1,1], false)
