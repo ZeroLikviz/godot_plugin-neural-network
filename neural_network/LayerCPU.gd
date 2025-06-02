@@ -19,10 +19,10 @@ var biases: Array = []
 var next_layer_neuron_count: int = 0
 
 # Callable function applied to the next layer's neuron inputs to compute activations.
-var activation_function: Callable
+var activation_function: ExpressionFunction
 
 # Derivative of the activation function, used for backpropagation.
-var activation_derivative: Callable
+var activation_derivative: ExpressionFunction
 
 # Stores additional neuron data (e.g., gradients). Each element is an Array for a specific data type.
 var neuron_data: Array = []
@@ -57,15 +57,6 @@ func _generate_random_weights(count: int) -> Array:
 		random_weights[i] = randf_range(-1.0, 1.0)
 	return random_weights
 
-# Creates a Callable from a GDScript expression string for use as an activation function.
-# @param expr GDScript code string (e.g., "1 / (1 + exp(-x))" for sigmoid).
-# @return A Callable representing the evaluated function.
-func _create_callable(expr: String) -> Callable:
-	var gd_script := GDScript.new()
-	gd_script.source_code = "func _layer_func(x: float) -> float: return " + expr
-	gd_script.reload()
-	return gd_script._layer_func
-
 # --- Initialization ---
 
 # Initializes the layer with specified neuron counts, biases, and activation function.
@@ -73,15 +64,13 @@ func _create_callable(expr: String) -> Callable:
 # @param next_neuron_count Number of neurons in the next layer.
 # @param use_bias Whether to include biases for the next layer.
 # @param activation Activation function for the next layer (Callable, String, or default identity function).
-func _init(current_neuron_count: int, next_neuron_count: int, use_bias: bool, activation: Variant = func(x): return x) -> void:
+func _init(current_neuron_count: int, next_neuron_count: int, use_bias: bool, activation: String, derivative: String = "auto") -> void:
 	neuron_activations.resize(current_neuron_count)
 	neuron_activations.fill(0.0)
 	neuron_inputs = neuron_activations.duplicate()
 	weights.resize(current_neuron_count)
 	self.next_layer_neuron_count = next_neuron_count
-	self.activation_derivative = func(x: float) -> float:
-		return (activation_function.call(x + NetworkConstants.EPS) - activation_function.call(x)) / NetworkConstants.EPS
-	set_activation_function(activation)
+	set_activation_function(activation, derivative)
 	
 	for i in range(weights.size()):
 		weights[i] = _generate_random_weights(next_neuron_count)
@@ -168,7 +157,7 @@ func forward(next_layer: LayerCPU) -> void:
 	
 	# Apply activation function to compute next layer's activations
 	for i in range(next_layer.neuron_activations.size()):
-		next_layer.neuron_activations[i] = next_layer.activation_function.call(next_layer.neuron_inputs[i])
+		next_layer.neuron_activations[i] = next_layer.activation_function.callable.call(next_layer.neuron_inputs[i])
 
 # Performs backpropagation to compute gradients for weights, biases, and neurons, assuming next layer's gradients are computed.
 # @param next_layer The next LayerCPU instance in the network.
@@ -182,14 +171,14 @@ func backpropagate(next_layer: LayerCPU) -> void:
 	for i in range(neuron_activations.size()):
 		for j in range(next_layer_neuron_count):
 			var delta: float = next_layer.neuron_data[next_neuron_grad_idx][j]
-			var derivative: float = next_layer.activation_derivative.call(next_layer.neuron_inputs[j])
+			var derivative: float = next_layer.activation_derivative.callable.call(next_layer.neuron_inputs[j])
 			weight_data[weight_grad_idx][i][j] = delta * derivative * neuron_activations[i]
 	
 	# Compute gradients for biases (if used)
 	if biases.size() > 0:
 		for j in range(next_layer_neuron_count):
 			var delta: float = next_layer.neuron_data[next_neuron_grad_idx][j]
-			var derivative: float = next_layer.activation_derivative.call(next_layer.neuron_inputs[j])
+			var derivative: float = next_layer.activation_derivative.callable.call(next_layer.neuron_inputs[j])
 			bias_data[bias_grad_idx][j] = delta * derivative
 	
 	# Compute gradients for neurons
@@ -198,7 +187,7 @@ func backpropagate(next_layer: LayerCPU) -> void:
 		for j in range(next_layer_neuron_count):
 			var delta: float = next_layer.neuron_data[next_neuron_grad_idx][j]
 			neuron_data[neuron_grad_idx][i] += delta * weights[i][j]
-		neuron_data[neuron_grad_idx][i] *= activation_derivative.call(neuron_inputs[i])
+		neuron_data[neuron_grad_idx][i] *= activation_derivative.callable.call(neuron_inputs[i])
 
 # Sets the activation values for this layer's neurons.
 # @param values Array of activation values, must match the layer's neuron count.
@@ -209,16 +198,16 @@ func set_activations(values: Array) -> void:
 # Sets the activation function and its derivative for the layer.
 # @param function Activation function as a Callable, GDScript string, or ActivationFunctions instance.
 # @param derivative Optional derivative as a Callable or GDScript string; if null, approximated numerically.
-func set_activation_function(function: Variant, derivative: Variant = null) -> void:
-	if function is ActivationFunctions.ActivationFunction:
-		activation_function = function.activation_function
-		activation_derivative = function.derivative_function
+func set_activation_function(function: String, derivative: String) -> void:
+	activation_function = ExpressionFunction.new("func(x: float) -> float:\n", function.indent("\t"))
+	if NetworkConstants.ACTIVATION_TO_DERIVATIVE.has(function):
+		activation_derivative = ExpressionFunction.new("func(x: float) -> float:\n", NetworkConstants.ACTIVATION_TO_DERIVATIVE[function].indent("\t"))
+	elif derivative == "auto":
+		derivative = "\tstatic var act: Callable = func(x: float) -> float:\n" + function.indent("\t\t") + "\n" + \
+					 "\treturn (act.call(x + NetworkConstants.EPS) - act.call(x)) / NetworkConstants.EPS"
+		activation_derivative = ExpressionFunction.new("func(x: float) -> float:\n", derivative)
 	else:
-		activation_function = _create_callable(function) if function is String else function
-		activation_derivative = _create_callable(derivative) if derivative is String else \
-			(derivative if derivative else \
-			func(x: float) -> float:
-				return (activation_function.call(x + NetworkConstants.EPS) - activation_function.call(x)) / NetworkConstants.EPS)
+		activation_derivative = ExpressionFunction.new("func(x: float) -> float:\n", derivative.indent("\t"))
 
 # Sets the optimizer for updating weights and biases during training.
 # @param optimizer_class GDScript class defining the optimizer.
