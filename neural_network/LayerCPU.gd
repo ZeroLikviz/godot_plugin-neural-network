@@ -199,15 +199,15 @@ func set_activations(values: Array) -> void:
 # @param function Activation function as a Callable, GDScript string, or ActivationFunctions instance.
 # @param derivative Optional derivative as a Callable or GDScript string; if null, approximated numerically.
 func set_activation_function(function: String, derivative: String) -> void:
-	activation_function = ExpressionFunction.new("func(x: float) -> float:\n", function.indent("\t"))
+	activation_function = ExpressionFunction.new("func(x: float) -> float:\n", function)
 	if NetworkConstants.ACTIVATION_TO_DERIVATIVE.has(function):
 		activation_derivative = ExpressionFunction.new("func(x: float) -> float:\n", NetworkConstants.ACTIVATION_TO_DERIVATIVE[function].indent("\t"))
 	elif derivative == "auto":
-		derivative = "\tstatic var act: Callable = func(x: float) -> float:\n" + function.indent("\t\t") + "\n" + \
-					 "\treturn (act.call(x + NetworkConstants.EPS) - act.call(x)) / NetworkConstants.EPS"
+		derivative = "static var act: Callable = func(x: float) -> float:\n" + function + "\n" + \
+					 "return (act.call(x + NetworkConstants.EPS) - act.call(x)) / NetworkConstants.EPS"
 		activation_derivative = ExpressionFunction.new("func(x: float) -> float:\n", derivative)
 	else:
-		activation_derivative = ExpressionFunction.new("func(x: float) -> float:\n", derivative.indent("\t"))
+		activation_derivative = ExpressionFunction.new("func(x: float) -> float:\n", derivative)
 
 # Sets the optimizer for updating weights and biases during training.
 # @param optimizer_class GDScript class defining the optimizer.
