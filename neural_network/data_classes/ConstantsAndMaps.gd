@@ -1,4 +1,3 @@
-## A class which purpose is to simply store data
 class_name NetworkConstants
 
 static var EPS : float = 1e-5
