@@ -120,6 +120,15 @@ func forward(input: Array) -> Array:
 		layers[i].forward(layers[i + 1])
 	return layers[-1].neuron_activations.duplicate()
 
+func predict(input: Array) -> Array:
+	if input.size() != layers[0].neuron_activations.size():
+		push_error("Input size (%d) does not match input layer size (%d)." % [input.size(), layers[0].neuron_activations.size()])
+		return []
+	layers[0].set_activations(input)
+	for i in range(layers.size() - 1):
+		layers[i].forward(layers[i + 1])
+	return layers[-1].neuron_activations.duplicate()
+
 func backpropagate(target: Array) -> void:
 	if target.size() != layers[-1].neuron_activations.size():
 		push_error("Target size (%d) does not match output layer size (%d)." % [target.size(), layers[-1].neuron_activations.size()])
