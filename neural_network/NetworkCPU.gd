@@ -29,6 +29,7 @@ func _init(layer_sizes: Array, use_bias: bool, activation_funcs: Variant = Activ
 	for layer in layers:
 		layer.add_weight_data("batch_gradient")
 		layer.add_bias_data("batch_gradient")
+	set_loss_function(LossFunctions.MSE)
 
 func insert_layer(index: int, neuron_count: int, use_bias: bool, activation: String = ActivationFunctions.Sigmoid, optimizer: Variant = null) -> void:
 	if index < -1 or index >= layers.size():
