@@ -13,43 +13,33 @@ var loss_function: Callable
 # @param use_bias Whether to enable biases for all layers (except the last).
 # @param activation_funcs Optional activation function(s) as a single Callable/String, array, or null (defaults to Tanh).
 # @param optimizers Optional optimizer(s) as a GDScript class, array, or null (defaults to AdamOptimizer).
-func _init(layer_sizes: Array, use_bias: bool, activation_funcs: Variant = null, optimizers: Variant = null) -> void:
+func _init(layer_sizes: Array, use_bias: bool, activation_funcs: Variant = ActivationFunctions.Sigmoid, optimizers: Variant = AdamOptimizer.new()) -> void:
 	if layer_sizes.size() < 2:
 		push_error("Network requires at least 2 layers (input and output).")
 		return
 	
 	# Initialize layers
 	for i in range(layer_sizes.size() - 1):
-		layers.append(LayerCPU.new(layer_sizes[i], layer_sizes[i + 1], use_bias))
-	layers.append(LayerCPU.new(layer_sizes[-1], 0, false))
+		layers.append(LayerCPU.new(layer_sizes[i], layer_sizes[i + 1], use_bias, ActivationFunctions.Sigmoid))
+	layers.append(LayerCPU.new(layer_sizes[-1], 0, false, ActivationFunctions.Sigmoid))
 	
-	# Set activation functions
-	if activation_funcs == null:
-		for i in range(layers.size()):
-			set_activation_function(i, ActivationFunctions.Tanh)
-	elif activation_funcs is Array:
+	if activation_funcs is Array:
 		if activation_funcs.size() != layers.size():
 			push_error("Activation function array size must match layer count.")
 			return
 		for i in range(layers.size()):
 			set_activation_function(i, activation_funcs[i])
 	else:
-		for i in range(layers.size()):
-			set_activation_function(i, activation_funcs)
+		set_activation_functions(activation_funcs)
 	
-	# Set optimizers
-	if optimizers == null:
-		for i in range(layers.size()):
-			set_optimizer(i, AdamOptimizer.new())
-	elif optimizers is Array:
+	if optimizers is Array:
 		if optimizers.size() != layers.size():
 			push_error("Optimizer array size must match layer count.")
 			return
 		for i in range(layers.size()):
 			set_optimizer(i, optimizers[i])
 	else:
-		for i in range(layers.size()):
-			set_optimizer(i, optimizers)
+		set_optimizers(optimizers)
 	
 	# Add batch derivative storage
 	for layer in layers:
@@ -64,23 +54,23 @@ func _init(layer_sizes: Array, use_bias: bool, activation_funcs: Variant = null,
 # @param use_bias Whether to enable biases for the new layer.
 # @param activation Optional activation function for the new layer.
 # @param optimizer Optional optimizer for the new layer.
-func insert_layer(index: int, neuron_count: int, use_bias: bool, activation: Variant = null, optimizer: Variant = null) -> void:
+func insert_layer(index: int, neuron_count: int, use_bias: bool, activation: String = ActivationFunctions.Sigmoid, optimizer: Variant = null) -> void:
 	if index < -1 or index >= layers.size():
 		push_error("Invalid layer index: %d" % index)
 		return
 	
 	if index == 0:
-		layers.push_front(LayerCPU.new(neuron_count, layers[0].neuron_activations.size(), use_bias))
+		layers.push_front(LayerCPU.new(neuron_count, layers[0].neuron_activations.size(), use_bias, activation))
 		set_activation_function(0, activation)
 		set_optimizer(0, optimizer)
 	elif index == -1 or index == layers.size() - 1:
 		var last_layer_size: int = layers[-1].neuron_activations.size()
-		layers[-1] = LayerCPU.new(last_layer_size, neuron_count, use_bias)
-		layers.push_back(LayerCPU.new(neuron_count, 0, false))
+		layers[-1] = LayerCPU.new(last_layer_size, neuron_count, use_bias, activation)
+		layers.push_back(LayerCPU.new(neuron_count, 0, false,  ActivationFunctions.Sigmoid))
 		set_activation_function(layers.size() - 2, activation)
 		set_optimizer(layers.size() - 2, optimizer)
 	else:
-		layers.insert(index, LayerCPU.new(neuron_count, layers[index].neuron_activations.size(), use_bias))
+		layers.insert(index, LayerCPU.new(neuron_count, layers[index].neuron_activations.size(), use_bias, activation))
 		if neuron_count != layers[index - 1].next_layer_neuron_count:
 			change_layer(index - 1, layers[index - 1].neuron_activations.size(), neuron_count)
 		set_activation_function(index, activation)
@@ -96,8 +86,7 @@ func change_layer(index: int, neuron_count: int, next_neuron_count: int) -> void
 		return
 	
 	var optimizer: Optimizer = layers[index].optimizer
-	var activation_func: Variant = layers[index].activation_function
-	layers[index] = LayerCPU.new(neuron_count, next_neuron_count, bool(layers[index].biases.size()), activation_func)
+	layers[index] = LayerCPU.new(neuron_count, next_neuron_count, bool(layers[index].biases.size()), layers[index].activation_function.expression)
 	set_optimizer(index, optimizer)
 
 # Removes a layer at the specified index and adjusts connections.
@@ -143,20 +132,18 @@ func _create_callable(expr: String) -> Callable:
 # Sets the activation function for a specific layer.
 # @param layer_idx Index of the layer to configure.
 # @param activation Activation function as a Callable, String, or ActivationFunctions instance.
-func set_activation_function(layer_idx: int, activation: Variant) -> void:
+func set_activation_function(layer_idx: int, activation: String, derivative: String = "auto") -> void:
 	if layer_idx < 0 or layer_idx >= layers.size():
 		push_error("Invalid layer index: %d" % layer_idx)
 		return
-	if activation == null:
-		layers[layer_idx].set_activation_function(ActivationFunctions.Tanh)
 	else:
-		layers[layer_idx].set_activation_function(activation)
+		layers[layer_idx].set_activation_function(activation, derivative)
 
 # Sets the same activation function for all layers.
 # @param activation Activation function as a Callable, String, or ActivationFunctions instance.
-func set_activation_functions(activation: Variant) -> void:
+func set_activation_functions(activation: String, derivative: String = "auto") -> void:
 	for i in range(layers.size()):
-		set_activation_function(i, activation)
+		set_activation_function(i, activation, derivative)
 
 # Sets the optimizer for a specific layer.
 # @param layer_idx Index of the layer to configure.
@@ -165,16 +152,14 @@ func set_optimizer(layer_idx: int, optimizer: Optimizer) -> void:
 	if layer_idx < 0 or layer_idx >= layers.size():
 		push_error("Invalid layer index: %d" % layer_idx)
 		return
-	if optimizer == null:
-		layers[layer_idx].set_optimizer(AdamOptimizer.new())
 	else:
 		layers[layer_idx].set_optimizer(optimizer)
 
 # Sets the same optimizer for all layers.
 # @param optimizer_class GDScript class defining the optimizer.
-func set_optimizers(optimizer_class: Variant) -> void:
+func set_optimizers(optimizer: Optimizer) -> void:
 	for i in range(layers.size()):
-		set_optimizer(i, optimizer_class)
+		set_optimizer(i, optimizer)
 
 # Enables or disables biases for a specific layer.
 # @param layer_idx Index of the layer to modify.
@@ -344,51 +329,6 @@ func save_model(path: String) -> void:
 		"optimizer_hyperparameters": layers.map(func(layer): return layer.optimizer.get_hyperparameters())
 	}
 	file.store_string(JSON.stringify(model_data))
-	file.close()
-
-# Loads the network's configuration, weights, biases, and optimizer details from a file.
-# @param path File path to load the model from.
-func load_model(path: String) -> void:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		push_error("Failed to open file for reading: %s" % path)
-		return
-	
-	var json: JSON = JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		push_error("Failed to parse JSON from file: %s" % path)
-		file.close()
-		return
-	
-	var model_data: Dictionary = json.data
-	if not model_data.has_all(["layer_sizes", "biases_enabled", "weights", "biases", "optimizers", "optimizer_hyperparameters"]):
-		push_error("Invalid model data format.")
-		file.close()
-		return
-	
-	# Initialize layers
-	layers.clear()
-	for i in range(model_data.layer_sizes.size() - 1):
-		layers.append(LayerCPU.new(model_data.layer_sizes[i], model_data.layer_sizes[i + 1], model_data.biases_enabled[i]))
-	layers.append(LayerCPU.new(model_data.layer_sizes[-1], 0, false))
-	
-	# Load weights, biases, optimizers, and hyperparameters
-	for i in range(layers.size()):
-		layers[i].weights = model_data.weights[i]
-		layers[i].biases = model_data.biases[i]
-		# Restore optimizer
-		var optimizer_name: String = model_data.optimizers[i]
-		if NetworkConstants.OPTIMIZERS_MAP.has(optimizer_name):
-			var optimizer: Optimizer = NetworkConstants.OPTIMIZERS_MAP[optimizer_name].new()
-			optimizer.load_hyperparameters(model_data.optimizer_hyperparameters[i])
-			layers[i].set_optimizer(optimizer)
-		else:
-			push_error("Unknown optimizer: %s for layer %d" % [optimizer_name, i])
-			layers[i].set_optimizer(AdamOptimizer.new()) # Fallback to default
-		# Add batch gradient storage
-		layers[i].add_weight_data("batch_gradient")
-		layers[i].add_bias_data("batch_gradient")
-	
 	file.close()
 
 static func placeholder() -> NetworkCPU:
