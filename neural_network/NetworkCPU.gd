@@ -222,6 +222,114 @@ func compute_loss(inputs: Array, targets: Array) -> float:
 		total_loss += loss_function.callable.call(forward(inputs[i]), targets[i])
 	return total_loss / inputs.size()
 
+func save_model(file_path: String) -> void:
+	var model_data: Dictionary = {
+		"layers": [],
+		"loss_function": loss_function.expression
+	}
+	
+	for layer in layers:
+		var layer_data: Dictionary = {
+			"neuron_count": layer.size(),
+			"next_layer_neuron_count": layer.next_layer_neuron_count,
+			"use_bias": layer.biases.size() > 0,
+			"weights": layer.weights.duplicate(true),
+			"biases": layer.biases.duplicate(),
+			"activation_function": layer.activation_function.expression,
+			"optimizer": {
+				"class_name": layer.optimizer.get_class_name(),
+				"hyperparameters": layer.optimizer.get_hyperparameters()
+			}
+		}
+		model_data["layers"].append(layer_data)
+	
+	var file = FileAccess.open(file_path, FileAccess.WRITE)
+	if file:
+		file.store_string(JSON.stringify(model_data, "\t"))
+		file.close()
+	else:
+		push_error("Failed to open file for writing: %s" % file_path)
+
+func load_model(file_path: String) -> void:
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	if not file:
+		push_error("Failed to open file for reading: %s" % file_path)
+		return
+	
+	var json_text = file.get_as_text()
+	file.close()
+	
+	var json = JSON.new()
+	var parse_result = json.parse(json_text)
+	if parse_result != OK:
+		push_error("Failed to parse JSON: %s" % json.get_error_message())
+		return
+	
+	var model_data = json.data
+	if not model_data is Dictionary:
+		push_error("Invalid model data format: not a dictionary")
+		return
+	
+	layers.clear()
+	
+	if not model_data.has("layers") or not model_data["layers"] is Array:
+		push_error("Invalid model data: missing or invalid 'layers' array")
+		return
+	
+	var layer_sizes: Array = []
+	for layer_data in model_data["layers"]:
+		if not layer_data is Dictionary:
+			push_error("Invalid layer data: not a dictionary")
+			return
+		layer_sizes.append(layer_data.get("neuron_count", 0))
+	
+	var use_bias: bool = model_data["layers"][0].get("use_bias", false)
+	_init(layer_sizes, use_bias)
+	
+	for i in range(layers.size()):
+		var layer = layers[i]
+		var layer_data = model_data["layers"][i]
+		
+		if layer_data["neuron_count"] != layer.size():
+			push_error("Mismatch in neuron count for layer %d" % i)
+			return
+		if layer_data["next_layer_neuron_count"] != layer.next_layer_neuron_count:
+			push_error("Mismatch in next layer neuron count for layer %d" % i)
+			return
+		
+		if layer_data.has("weights"):
+			layer.weights = layer_data["weights"].duplicate(true)
+		
+		if layer_data.get("use_bias", false):
+			if layer_data.has("biases"):
+				layer.biases = layer_data["biases"].duplicate()
+			else:
+				push_error("Missing biases for layer %d with use_bias=true" % i)
+				return
+		else:
+			layer.biases = []
+		
+		if layer_data.has("activation_function"):
+			layer.set_activation_function(layer_data["activation_function"], "auto")
+		
+		if layer_data.has("optimizer") and layer_data["optimizer"] is Dictionary:
+			var opt_data = layer_data["optimizer"]
+			var opt_class_name = opt_data.get("class_name", "")
+			if NetworkConstants.OPTIMIZERS_MAP.has(opt_class_name):
+				var optimizer = NetworkConstants.OPTIMIZERS_MAP[opt_class_name].new()
+				if opt_data.has("hyperparameters"):
+					optimizer.load_hyperparameters(opt_data["hyperparameters"])
+				layer.set_optimizer(optimizer)
+			else:
+				push_error("Unknown optimizer class: %s" % opt_class_name)
+				return
+		
+		layer.add_weight_data("batch_gradient")
+		layer.add_bias_data("batch_gradient")
+	
+	if model_data.has("loss_function"):
+		set_loss_function(model_data["loss_function"])
+
 static func placeholder() -> NetworkCPU:
 	var network : NetworkCPU = NetworkCPU.new([1,1], false)
 	return network
